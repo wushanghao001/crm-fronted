@@ -2,7 +2,7 @@ import axios, { type InternalAxiosRequestConfig, type AxiosResponse } from 'axio
 import { useAuthStore } from '@/stores/auth'
 import { message } from '@/utils/message'
 
-const baseURL = (import.meta as any).env.VITE_API_URL || 'http://localhost:8888/api'
+const baseURL = 'https://crm-backend-upuy.onrender.com/api'
 
 const request = axios.create({
   baseURL,
