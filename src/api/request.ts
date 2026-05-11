@@ -3,7 +3,7 @@ import { useAuthStore } from '@/stores/auth'
 import { message } from '@/utils/message'
 
 // const baseURL = 'http://localhost:8888/api'
-const baseURL = 'https://crm-backend-upuy.onrender.com/api'
+const baseURL = 'https://crm-backend-upuy.onrender.com'
 
 const request = axios.create({
   baseURL,
