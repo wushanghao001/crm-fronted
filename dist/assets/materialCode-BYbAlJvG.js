@@ -1,0 +1,1 @@
+import{aq as t}from"./index-DDBnr8UM.js";const o=e=>t.get("/material-codes",{params:e}),s=e=>t.post("/material-codes",e),d=(e,a)=>t.put(`/material-codes/${e}`,a),c=e=>t.delete(`/material-codes/${e}`);export{s as c,c as d,o as g,d as u};

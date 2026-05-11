@@ -57,7 +57,7 @@
 
       <div class="p-4 bg-yellow-50 dark:bg-yellow-900/20 border-b border-gray-200 dark:border-gray-700">
         <p class="text-sm text-yellow-800 dark:text-yellow-200">
-          <span class="font-medium">提示：</span>如需增删改客户跟进记录，请到 <span class="font-medium text-blue-600">客户列表</span> 中选择客户后点击 <span class="font-medium">跟进</span> 按钮进行操作。
+          <span class="font-medium">提示：</span>如需增删改客户跟进记录，请到 <span class="font-medium text-blue-600 cursor-pointer hover:underline" @click="goToCustomerList">客户列表</span> 中选择客户后点击 <span class="font-medium">跟进</span> 按钮进行操作。
         </p>
       </div>
 
@@ -224,6 +224,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import {
   NButton, NInput, NSelect, NPagination, NModal,
   NDatePicker, NTag
@@ -231,6 +232,8 @@ import {
 import { Download as DownloadIcon } from '@vicons/ionicons5'
 import { message } from '@/utils/message'
 import { getFollowList } from '@/api/customerFollow'
+
+const router = useRouter()
 
 const searchKeyword = ref('')
 const followTypeFilter = ref('')
@@ -367,6 +370,10 @@ const handleReset = () => {
   dateRange.value = null
   pagination.page = 1
   loadFollowList()
+}
+
+const goToCustomerList = () => {
+  router.push('/dashboard/customers')
 }
 
 const handlePageChange = (page: number) => {

@@ -1,5 +1,15 @@
 <template>
   <div class="space-y-6">
+    <div class="flex items-center justify-between">
+      <h2 class="text-xl font-bold text-gray-800 dark:text-white">工作台</h2>
+      <NButton type="info" @click="helpModal?.open()">
+        <template #icon>
+          <HelpCircle />
+        </template>
+        帮助手册
+      </NButton>
+    </div>
+
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <div v-if="authStore.user?.role === 'admin'" class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
         <div class="flex items-center justify-between">
@@ -169,6 +179,8 @@
       <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">最近客户</h3>
       <n-table :columns="columns" :data="recentCustomers" :pagination="false" />
     </div>
+
+    <HelpModal ref="helpModal" />
   </div>
 </template>
 
@@ -181,8 +193,9 @@ import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
-import { People, TrendingUp, Briefcase, Time, PersonAdd, Cart, ChatboxEllipses } from '@vicons/ionicons5'
+import { People, TrendingUp, Briefcase, Time, PersonAdd, Cart, ChatboxEllipses, HelpCircle } from '@vicons/ionicons5'
 import SalesFunnel from '@/components/SalesFunnel.vue'
+import HelpModal from '@/components/HelpModal.vue'
 import { useAuthStore } from '@/stores/auth'
 import request from '@/api/request'
 import { getFollowList } from '@/api/customerFollow'
@@ -195,6 +208,8 @@ use([CanvasRenderer, LineChart, GridComponent, TooltipComponent])
 const router = useRouter()
 const authStore = useAuthStore()
 const message = messageUtil
+
+const helpModal = ref<InstanceType<typeof HelpModal> | null>(null)
 
 const funnelLoading = ref(false)
 const funnelReady = ref(false)
