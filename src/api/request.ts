@@ -2,11 +2,12 @@ import axios, { type InternalAxiosRequestConfig, type AxiosResponse } from 'axio
 import { useAuthStore } from '@/stores/auth'
 import { message } from '@/utils/message'
 
+// const baseURL = 'http://localhost:8888/api'
 const baseURL = 'https://crm-backend-upuy.onrender.com/api'
 
 const request = axios.create({
   baseURL,
-  timeout: 10000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json'
   }
@@ -61,3 +62,14 @@ request.interceptors.response.use(
 )
 
 export default request
+
+request.getBlob = (url: string, config?: any) => {
+  return axios.get(baseURL + url, {
+    ...config,
+    responseType: 'blob',
+    headers: {
+      ...config?.headers,
+      'Authorization': `Bearer ${useAuthStore().token}`
+    }
+  })
+}

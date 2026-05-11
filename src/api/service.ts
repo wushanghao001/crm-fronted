@@ -31,3 +31,7 @@ export const updateService = (id: number, data: Service) => {
 export const deleteService = (id: number) => {
   return request.delete(`/services/${id}`)
 }
+
+export const batchDeleteServices = (ids: number[]) => {
+  return request.delete('/services/batch', { data: { ids } })
+}

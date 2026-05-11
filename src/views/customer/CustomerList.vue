@@ -5,103 +5,72 @@
         <h2 class="text-xl font-bold text-gray-800 dark:text-white">客户管理</h2>
         <p class="text-gray-500 dark:text-gray-400 mt-1">管理所有客户信息</p>
       </div>
-      <NButton v-if="listType === 'mine'" type="primary" @click="handleAdd" class="bg-blue-500 hover:bg-blue-600">
-        <Add class="w-4 h-4 mr-2" />
-        添加客户
-      </NButton>
+      <div class="flex gap-3">
+        <NButton v-if="selectedIds.length > 0 && listType === 'mine'" type="error" @click="handleBatchDelete">
+          <DeleteIcon class="w-4 h-4 mr-2" />
+          批量删除 ({{ selectedIds.length }})
+        </NButton>
+        <NButton v-if="listType === 'mine'" type="primary" @click="handleAdd" class="bg-blue-500 hover:bg-blue-600">
+          <Add class="w-4 h-4 mr-2" />
+          添加客户
+        </NButton>
+      </div>
     </div>
 
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-      <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div class="flex items-center gap-4">
-          <NTabs v-model:value="listType" type="line" @update:value="handleListTypeChange">
-            <NTab name="mine">我的客户</NTab>
-            <NTab name="public">公海客户</NTab>
-          </NTabs>
-          <div class="flex items-center gap-3 flex-1 justify-end">
-            <NInput
-              v-model:value="searchKeyword"
-              placeholder="搜索客户名称或电话"
-              style="width: 300px;"
-              @keyup.enter="handleSearch"
-            />
-            <NSelect
-              v-model:value="statusFilter"
-              placeholder="全部"
-              style="width: 160px;"
-              :options="statusOptions"
-            />
-            <NButton type="primary" @click="handleSearch">搜索</NButton>
-            <NButton @click="handleReset">重置</NButton>
-          </div>
+      <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 flex-wrap gap-4">
+        <NTabs v-model:value="listType" type="line" @update:value="handleListTypeChange">
+          <NTab name="mine">{{ authStore.hasRole('admin') ? '已被认领客户' : '我的客户' }}</NTab>
+          <NTab name="public">公海客户</NTab>
+        </NTabs>
+        <div class="flex items-center gap-3" style="min-width: 480px;">
+          <NInput
+            v-model:value="searchKeyword"
+            placeholder="搜索客户名称或电话"
+            style="width: 200px;"
+            @keyup.enter="handleSearch"
+          />
+          <NSelect
+            v-model:value="statusFilter"
+            placeholder="全部"
+            style="width: 100px;"
+            :options="statusOptions"
+          />
+          <NButton type="primary" @click="handleSearch">搜索</NButton>
+          <NButton @click="handleReset">重置</NButton>
         </div>
       </div>
 
-      <div class="p-4">
-        <table class="w-full">
-          <thead>
-            <tr class="border-b border-gray-200">
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">客户名称</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">等级</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">联系电话</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">邮箱</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">地址</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">行业</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">规模</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">状态</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">创建时间</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="customer in customerList"
-              :key="customer.id"
-              class="border-b border-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              <td class="py-3 px-4 text-sm text-gray-800 dark:text-gray-200">{{ customer.name }}</td>
-              <td class="py-3 px-4">
-                <span>{{ customer.customerLevel ? levelOptions.find(l => l.value === customer.customerLevel)?.label : '-' }}</span>
-              </td>
-              <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{{ customer.phone }}</td>
-              <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{{ customer.email }}</td>
-              <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{{ customer.address }}</td>
-              <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{{ customer.industry }}</td>
-              <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{{ customer.scale }}</td>
-              <td class="py-3 px-4 text-sm">
-                <span :class="getStatusClass(customer.status)">{{ getStatusText(customer.status) }}</span>
-              </td>
-              <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{{ customer.createdAt }}</td>
-              <td class="py-3 px-4 text-sm">
-                <template v-if="listType === 'mine'">
-                  <NButton size="small" type="primary" @click="handleEdit(customer)" class="mr-2">编辑</NButton>
-                  <NButton size="small" type="warning" @click="handleFollowUp(customer)" class="mr-2">跟进</NButton>
-                  <NPopconfirm @positive-click="() => handleDeleteConfirm(customer.id)">
-                    <template #trigger>
-                      <NButton size="small" type="error">删除</NButton>
-                    </template>
-                    确定要删除该客户吗？
-                  </NPopconfirm>
-                </template>
-                <template v-else>
-                  <NButton size="small" type="success" @click="handleClaim(customer)">认领</NButton>
-                </template>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="p-4 flex justify-end">
-        <NPagination
-          v-model:page="pagination.page"
-          :page-size="pagination.pageSize"
-          :item-count="pagination.total"
-          @update:page="handlePageChange"
-          @update:page-size="handlePageSizeChange"
-          :page-sizes="[10, 20, 50]"
-          show-size-picker
+      <!-- DataTable 容器 -->
+      <div class="table-container">
+        <NDataTable
+          ref="dataTableRef"
+          :columns="columns"
+          :data="customerList"
+          :loading="loading"
+          :pagination="false"
+          :scroll-x="1500"
+          :scroll-y="500"
+          :row-key="(row) => row.id"
+          :checked-row-keys="selectedIds"
+          @update:checked-row-keys="handleCheckedRowKeysChange"
         />
+
+        <div class="flex items-center justify-between p-4 border-t border-gray-200 dark:border-gray-700">
+          <span class="text-sm text-gray-500">
+            共 {{ pagination.total }} 条
+          </span>
+          <NPagination
+            v-model:page="pagination.page"
+            v-model:page-size="pagination.pageSize"
+            :page-count="pagination.pageCount"
+            :page-sizes="pagination.pageSizes"
+            :show-size-picker="pagination.showSizePicker"
+            :total="pagination.total"
+            @update:page="handlePageChange"
+            @update:page-size="handlePageSizeChange"
+          />
+        </div>
       </div>
     </div>
 
@@ -142,31 +111,72 @@
         </div>
       </template>
     </NModal>
+
+    <NModal v-model:show="showBatchDeleteModal" preset="dialog" title="确认删除" positive-text="确定" negative-text="取消"
+      @positive-click="confirmBatchDelete"
+      @negative-click="showBatchDeleteModal = false"
+      :loading="batchDeleteLoading">
+      <template #content>
+        <p>确定要删除选中的 {{ selectedIds.length }} 个客户吗？此操作不可撤销。</p>
+      </template>
+    </NModal>
+
+    <NModal v-model:show="showAssignModal" preset="card" title="分配客户" style="width: 400px;">
+      <NForm :model="{}" label-placement="left" label-width="80px">
+        <NFormItem label="客户名称">
+          <span class="text-gray-700">{{ currentAssignCustomer?.name }}</span>
+        </NFormItem>
+        <NFormItem label="选择用户">
+          <NSelect
+            v-model:value="assignUserId"
+            :options="allUsers.map(u => ({ label: u.username, value: u.id }))"
+            placeholder="请选择要分配的用户"
+            style="width: 100%;"
+          />
+        </NFormItem>
+      </NForm>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <NButton @click="showAssignModal = false">取消</NButton>
+          <NButton type="primary" :loading="assignLoading" @click="confirmAssign">确认分配</NButton>
+        </div>
+      </template>
+    </NModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, h } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NButton, NInput, NSelect, NPagination, NModal, NForm, NFormItem, NPopconfirm, NTabs, NTab, useMessage } from 'naive-ui'
-import { Add } from '@vicons/ionicons5'
-import { getCustomers, createCustomer, updateCustomer, deleteCustomer, claimCustomer } from '@/api/customer'
+import { NButton, NInput, NSelect, NPagination, NModal, NForm, NFormItem, NPopconfirm, NTabs, NTab, NDataTable, NSpace, NCard } from 'naive-ui'
+import { Add, Pencil as EditIcon, ArrowBack as FollowIcon, Trash as DeleteIcon, PersonAdd as ClaimIcon, People as AssignIcon } from '@vicons/ionicons5'
+import { getCustomers, createCustomer, updateCustomer, deleteCustomer, claimCustomer, batchDeleteCustomers, assignCustomer, getAllUsers } from '@/api/customer'
 import { message } from '@/utils/message'
+import { useAuthStore } from '@/stores/auth'
 
+const authStore = useAuthStore()
 const route = useRoute()
 const router = useRouter()
-const messageInst = useMessage()
 
 const listType = ref<'mine' | 'public'>('mine')
 const searchKeyword = ref('')
 const statusFilter = ref('')
 const loading = ref(false)
 const customerList = ref<any[]>([])
+const dataTableRef = ref()
+const selectedIds = ref<number[]>([])
 
 const showModal = ref(false)
+const showBatchDeleteModal = ref(false)
+const showAssignModal = ref(false)
 const isEdit = ref(false)
 const submitLoading = ref(false)
+const batchDeleteLoading = ref(false)
+const assignLoading = ref(false)
 const currentEditId = ref<number | null>(null)
+const currentAssignCustomer = ref<any>(null)
+const assignUserId = ref<number | null>(null)
+const allUsers = ref<{ id: number; username: string; role: string }[]>([])
 
 const formData = reactive({
   name: '',
@@ -183,7 +193,10 @@ const formData = reactive({
 const pagination = reactive({
   page: 1,
   pageSize: 10,
-  total: 0
+  pageCount: 1,
+  total: 0,
+  showSizePicker: true,
+  pageSizes: [10, 20, 50, 100]
 })
 
 const statusOptions = [
@@ -231,6 +244,81 @@ const statusMap: Record<string, { text: string; class: string }> = {
   'churned': { text: '已流失', class: 'px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700' }
 }
 
+const levelMap: Record<string, string> = {
+  'A': 'A级',
+  'B': 'B级',
+  'C': 'C级',
+  'D': 'D级'
+}
+
+const getStatusText = (status: string) => {
+  return statusMap[status]?.text || status
+}
+
+const getStatusClass = (status: string) => {
+  return statusMap[status]?.class || 'px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700'
+}
+
+const renderActions = (customer: any) => {
+  if (listType.value === 'mine') {
+    return h('div', { class: 'flex items-center gap-2' }, [
+      h(NButton, { size: 'small', type: 'primary', onClick: () => handleEdit(customer) }, {
+        default: () => '编辑',
+        icon: () => h(EditIcon, { class: 'w-3 h-3 mr-1' })
+      }),
+      h(NButton, { size: 'small', type: 'info', onClick: () => handleFollowUp(customer) }, {
+        default: () => '跟进',
+        icon: () => h(FollowIcon, { class: 'w-3 h-3 mr-1' })
+      }),
+      h(NPopconfirm, {
+        title: `确定要删除客户 ${customer.name} 吗？`,
+        onPositiveClick: () => handleDeleteConfirm(customer.id)
+      }, {
+        trigger: () => h(NButton, { size: 'small', type: 'error' }, {
+          default: () => '删除',
+          icon: () => h(DeleteIcon, { class: 'w-3 h-3 mr-1' })
+        })
+      })
+    ])
+  } else {
+    const buttons = []
+    if (authStore.hasRole('admin')) {
+      buttons.push(
+        h(NButton, { size: 'small', type: 'warning', onClick: () => handleAssign(customer) }, {
+          default: () => '分配',
+          icon: () => h(AssignIcon, { class: 'w-3 h-3 mr-1' })
+        })
+      )
+    }
+    buttons.push(
+      h(NButton, { size: 'small', type: 'success', onClick: () => handleClaim(customer) }, {
+        default: () => '认领',
+        icon: () => h(ClaimIcon, { class: 'w-3 h-3 mr-1' })
+      })
+    )
+    return h('div', { class: 'flex items-center gap-2' }, buttons)
+  }
+}
+
+const columns = [
+  { type: 'selection', width: 50, fixed: 'left' },
+  { title: '序号', key: 'index', width: 60, fixed: 'left',
+    render: (row: any, index: number) => h('span', index + 1) },
+  { title: '客户名称', key: 'name', width: 150, fixed: 'left', ellipsis: { tooltip: true } },
+  { title: '等级', key: 'customerLevel', width: 80,
+    render: (row: any) => h('span', { class: 'text-gray-600' }, levelMap[row.customerLevel] || '-') },
+  { title: '联系电话', key: 'phone', width: 120, ellipsis: { tooltip: true } },
+  { title: '邮箱', key: 'email', width: 180, ellipsis: { tooltip: true } },
+  { title: '地址', key: 'address', width: 150, ellipsis: { tooltip: true } },
+  { title: '行业', key: 'industry', width: 100 },
+  { title: '规模', key: 'scale', width: 80 },
+  { title: '状态', key: 'status', width: 100,
+    render: (row: any) => h('span', { class: getStatusClass(row.status) }, getStatusText(row.status)) },
+  { title: '创建时间', key: 'createdAt', width: 140 },
+  { title: '操作', key: 'actions', width: 250, fixed: 'right',
+    render: (row: any) => renderActions(row) }
+]
+
 const handleListTypeChange = (type: 'mine' | 'public') => {
   listType.value = type
   pagination.page = 1
@@ -247,16 +335,38 @@ const handleClaim = async (customer: any) => {
   }
 }
 
+const handleAssign = async (customer: any) => {
+  currentAssignCustomer.value = customer
+  assignUserId.value = null
+  try {
+    const users = await getAllUsers()
+    allUsers.value = (users as any).filter((u: any) => u.role !== 'admin')
+    showAssignModal.value = true
+  } catch (error: any) {
+    message.error('获取用户列表失败')
+  }
+}
+
+const confirmAssign = async () => {
+  if (!assignUserId.value) {
+    message.warning('请选择要分配的用户')
+    return
+  }
+  try {
+    assignLoading.value = true
+    await assignCustomer(currentAssignCustomer.value.id, assignUserId.value)
+    message.success('分配成功')
+    showAssignModal.value = false
+    loadCustomers()
+  } catch (error: any) {
+    message.error(error.message || '分配失败')
+  } finally {
+    assignLoading.value = false
+  }
+}
+
 const handleFollowUp = (customer: any) => {
   router.push(`/dashboard/customers/${customer.id}/follow`)
-}
-
-const getStatusText = (status: string) => {
-  return statusMap[status]?.text || status
-}
-
-const getStatusClass = (status: string) => {
-  return statusMap[status]?.class || 'px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700'
 }
 
 const handleSearch = () => {
@@ -272,6 +382,9 @@ const handleReset = () => {
 }
 
 const handlePageChange = (page: number) => {
+  const totalPages = Math.ceil(pagination.total / pagination.pageSize) || 1
+  if (page < 1) page = 1
+  if (page > totalPages) page = totalPages
   pagination.page = page
   loadCustomers()
 }
@@ -279,6 +392,7 @@ const handlePageChange = (page: number) => {
 const handlePageSizeChange = (pageSize: number) => {
   pagination.pageSize = pageSize
   pagination.page = 1
+  pagination.pageCount = Math.ceil(pagination.total / pagination.pageSize) || 1
   loadCustomers()
 }
 
@@ -344,6 +458,34 @@ const handleDeleteConfirm = async (id: number) => {
   }
 }
 
+const handleCheckedRowKeysChange = (keys: number[]) => {
+  selectedIds.value = keys
+}
+
+const handleBatchDelete = () => {
+  if (selectedIds.value.length === 0) {
+    message.warning('请选择要删除的客户')
+    return
+  }
+  showBatchDeleteModal.value = true
+}
+
+const confirmBatchDelete = async () => {
+  batchDeleteLoading.value = true
+  try {
+    await batchDeleteCustomers(selectedIds.value)
+    message.success('批量删除成功')
+    selectedIds.value = []
+    showBatchDeleteModal.value = false
+    loadCustomers()
+  } catch (error: any) {
+    message.error(error.message || '批量删除失败')
+  } finally {
+    batchDeleteLoading.value = false
+    showBatchDeleteModal.value = false
+  }
+}
+
 const loadCustomers = async () => {
   loading.value = true
   try {
@@ -369,6 +511,7 @@ const loadCustomers = async () => {
       createdAt: item.createdAt || item.created_at || '2024-01-01'
     }))
     pagination.total = data.total || 0
+    pagination.pageCount = Math.ceil(pagination.total / pagination.pageSize) || 1
   } catch (error) {
     message.error('加载数据失败')
   } finally {

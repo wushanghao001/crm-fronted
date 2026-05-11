@@ -5,89 +5,66 @@
         <h2 class="text-xl font-bold text-gray-800 dark:text-white">服务管理</h2>
         <p class="text-gray-500 dark:text-gray-400 mt-1">管理客户服务请求</p>
       </div>
-      <NButton type="primary" class="bg-blue-500 hover:bg-blue-600" @click="openCreateModal">
-        <Add class="w-4 h-4 mr-2" />
-        创建服务单
-      </NButton>
+      <div class="flex gap-3">
+        <NButton v-if="selectedIds.length > 0" type="error" @click="handleBatchDelete">
+          <DeleteIcon class="w-4 h-4 mr-2" />
+          批量删除 ({{ selectedIds.length }})
+        </NButton>
+        <NButton type="primary" class="bg-blue-500 hover:bg-blue-600" @click="openCreateModal">
+          <Add class="w-4 h-4 mr-2" />
+          创建服务单
+        </NButton>
+      </div>
     </div>
 
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-      <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div class="flex flex-wrap gap-4 items-center">
-          <NTabs v-model:value="listType" type="line" @update:value="handleListTypeChange">
-            <NTab name="all" v-if="authStore.user?.role === 'admin'">全部工单</NTab>
-            <NTab name="my">待我处理</NTab>
-            <NTab name="processed">已处理</NTab>
-          </NTabs>
-          <div class="flex flex-wrap gap-4 flex-1 justify-end">
-            <div class="w-48">
-              <NInput
-                v-model:value="searchKeyword"
-                placeholder="搜索客户名称"
-                @keyup.enter="handleSearch"
-              />
-            </div>
-            <NButton type="primary" @click="handleSearch">搜索</NButton>
-            <NButton @click="handleReset">重置</NButton>
-          </div>
+      <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 flex-wrap gap-4">
+        <NTabs v-model:value="listType" type="line" @update:value="handleListTypeChange">
+          <NTab name="all" v-if="authStore.user?.role === 'admin'">全部工单</NTab>
+          <NTab name="my">待我处理</NTab>
+          <NTab name="processed">已处理</NTab>
+        </NTabs>
+        <div class="flex items-center gap-3" style="min-width: 400px;">
+          <NInput
+            v-model:value="searchKeyword"
+            placeholder="搜索客户名称"
+            style="width: 200px;"
+            @keyup.enter="handleSearch"
+          />
+          <NButton type="primary" @click="handleSearch">搜索</NButton>
+          <NButton @click="handleReset">重置</NButton>
         </div>
       </div>
 
-      <div class="p-4">
-        <table class="w-full">
-          <thead>
-            <tr class="border-b border-gray-200">
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">服务编号</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">客户名称</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">服务类型</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">标题</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">描述</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">状态</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">优先级</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">创建时间</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="item in serviceList"
-              :key="item.id"
-              class="border-b border-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              <td class="py-3 px-4 text-sm text-gray-800 dark:text-gray-200">{{ item.serviceNo }}</td>
-              <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{{ item.customerName || '未知客户' }}</td>
-              <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{{ item.type }}</td>
-              <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{{ item.title }}</td>
-              <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                <NTooltip>
-                  <template #trigger>
-                    <span class="block max-w-[150px] truncate">{{ item.description || '-' }}</span>
-                  </template>
-                  {{ item.description || '无' }}
-                </NTooltip>
-              </td>
-              <td class="py-3 px-4 text-sm">
-                <span :class="getStatusClass(item.status)">{{ getStatusText(item.status) }}</span>
-              </td>
-              <td class="py-3 px-4 text-sm">
-                <span :class="getPriorityClass(item.priority)">{{ getPriorityText(item.priority) }}</span>
-              </td>
-              <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{{ item.createdAt }}</td>
-              <td class="py-3 px-4 text-sm">
-                <NButton size="small" type="primary" class="mr-2" @click="openHandleModal(item)">处理</NButton>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="p-4 flex justify-end">
-        <NPagination
-          v-model:page="pagination.page"
-          :page-size="pagination.pageSize"
-          :item-count="pagination.total"
-          @update:page="handlePageChange"
+      <div class="table-container">
+        <NDataTable
+          ref="dataTableRef"
+          :columns="columns"
+          :data="serviceList"
+          :loading="loading"
+          :pagination="false"
+          :scroll-x="1400"
+          :scroll-y="500"
+          :row-key="(row) => row.id"
+          :checked-row-keys="selectedIds"
+          @update:checked-row-keys="handleCheckedRowKeysChange"
         />
+
+        <div class="flex items-center justify-between p-4 border-t border-gray-200 dark:border-gray-700">
+          <span class="text-sm text-gray-500">
+            共 {{ pagination.total }} 条
+          </span>
+          <NPagination
+            v-model:page="pagination.page"
+            v-model:page-size="pagination.pageSize"
+            :page-count="pagination.pageCount"
+            :page-sizes="pagination.pageSizes"
+            :show-size-picker="pagination.showSizePicker"
+            :total="pagination.total"
+            @update:page="handlePageChange"
+            @update:page-size="handlePageSizeChange"
+          />
+        </div>
       </div>
     </div>
 
@@ -149,25 +126,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, h } from 'vue'
 import { useRoute } from 'vue-router'
-import { NButton, NInput, NSelect, NPagination, NTabs, NTab, NModal, NForm, NFormItem, NTooltip } from 'naive-ui'
-import { Add } from '@vicons/ionicons5'
+import { NButton, NInput, NSelect, NPagination, NTabs, NTab, NModal, NForm, NFormItem, NTooltip, NDataTable } from 'naive-ui'
+import { Add, Pencil as EditIcon, Trash as DeleteIcon } from '@vicons/ionicons5'
 import { message } from '@/utils/message'
 import { useAuthStore } from '@/stores/auth'
-import { createService, updateService } from '@/api/service'
+import { createService, updateService, deleteService, batchDeleteServices } from '@/api/service'
 import { getCustomers } from '@/api/customer'
+import request from '@/api/request'
 
 const authStore = useAuthStore()
 const route = useRoute()
+const dataTableRef = ref()
 
 const listType = ref<'all' | 'my' | 'processed'>('my')
 const searchKeyword = ref('')
-const statusFilter = ref('')
 const loading = ref(false)
+const selectedIds = ref<number[]>([])
 
 const showCreateModal = ref(false)
 const showHandleModal = ref(false)
+
 const formData = reactive({
   customerId: null as number | null,
   customerName: '',
@@ -189,6 +169,60 @@ const handleForm = reactive({
   status: '',
   remark: ''
 })
+
+const serviceList = ref<any[]>([])
+
+const pagination = reactive({
+  page: 1,
+  pageSize: 10,
+  pageCount: 1,
+  total: 0,
+  showSizePicker: true,
+  pageSizes: [10, 20, 50, 100]
+})
+
+const statusMap: Record<string, { label: string; class: string }> = {
+  'pending': { label: '待处理', class: 'px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-700' },
+  'processing': { label: '处理中', class: 'px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-700' },
+  'completed': { label: '已完成', class: 'px-2 py-1 rounded-full text-xs bg-green-100 text-green-700' },
+  'closed': { label: '已关闭', class: 'px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700' }
+}
+
+const priorityMap: Record<string, { label: string; class: string }> = {
+  'high': { label: '高', class: 'px-2 py-1 rounded-full text-xs bg-red-100 text-red-700' },
+  'medium': { label: '中', class: 'px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-700' },
+  'low': { label: '低', class: 'px-2 py-1 rounded-full text-xs bg-green-100 text-green-700' }
+}
+
+const getStatusText = (status: string) => statusMap[status]?.label || status
+const getStatusClass = (status: string) => statusMap[status]?.class || 'px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700'
+const getPriorityText = (priority: string) => priorityMap[priority]?.label || priority
+const getPriorityClass = (priority: string) => priorityMap[priority]?.class || 'px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700'
+
+const renderActions = (row: any) => {
+  return h('div', { class: 'flex items-center gap-2' }, [
+    h(NButton, { size: 'small', type: 'primary', onClick: () => openHandleModal(row) }, { default: () => '处理' })
+  ])
+}
+
+const columns = [
+  { type: 'selection', width: 50, fixed: 'left' },
+  { title: '序号', key: 'index', width: 60, fixed: 'left',
+    render: (row: any, index: number) => h('span', index + 1) },
+  { title: '服务编号', key: 'serviceNo', width: 120, fixed: 'left', ellipsis: { tooltip: true } },
+  { title: '客户名称', key: 'customerName', width: 120, ellipsis: { tooltip: true } },
+  { title: '服务类型', key: 'type', width: 100,
+    render: (row: any) => h('span', {}, row.type || '其他') },
+  { title: '标题', key: 'title', width: 180, ellipsis: { tooltip: true } },
+  { title: '描述', key: 'description', width: 150, ellipsis: { tooltip: true } },
+  { title: '状态', key: 'status', width: 100,
+    render: (row: any) => h('span', { class: getStatusClass(row.status) }, getStatusText(row.status)) },
+  { title: '优先级', key: 'priority', width: 80,
+    render: (row: any) => h('span', { class: getPriorityClass(row.priority) }, getPriorityText(row.priority)) },
+  { title: '创建时间', key: 'createdAt', width: 140 },
+  { title: '操作', key: 'actions', width: 100, fixed: 'right',
+    render: (row: any) => renderActions(row) }
+]
 
 const openHandleModal = (item: any) => {
   handleForm.id = item.id
@@ -218,66 +252,15 @@ const handleUpdate = async () => {
 const loadCustomerOptions = async () => {
   try {
     const response: any = await getCustomers({ pageNum: 1, pageSize: 1000, listType: 'mine' })
-    console.log('Customer response:', response)
     allCustomers.value = response.list || []
     customerOptions.value = allCustomers.value.map((c: any) => ({
       label: c.name,
       value: c.id
     }))
-    console.log('Customer options:', customerOptions.value)
   } catch (error) {
     console.error('加载客户列表失败', error)
   }
 }
-
-const createStatusOptions = [
-  { label: '待处理', value: 'pending' },
-  { label: '处理中', value: 'processing' },
-  { label: '已完成', value: 'completed' },
-  { label: '已关闭', value: 'closed' }
-]
-
-const statusOptions = [
-  { label: '全部', value: '' },
-  { label: '待处理', value: 'pending' },
-  { label: '处理中', value: 'processing' },
-  { label: '已完成', value: 'completed' },
-  { label: '已关闭', value: 'closed' }
-]
-
-const serviceList = ref<any[]>([])
-
-const pagination = reactive({
-  page: 1,
-  pageSize: 10,
-  total: 0
-})
-
-const statusMap: Record<string, { label: string; class: string }> = {
-  'pending': { label: '待处理', class: 'px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-700' },
-  'processing': { label: '处理中', class: 'px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-700' },
-  'completed': { label: '已完成', class: 'px-2 py-1 rounded-full text-xs bg-green-100 text-green-700' },
-  'closed': { label: '已关闭', class: 'px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700' }
-}
-
-const priorityMap: Record<string, { label: string; class: string }> = {
-  'high': { label: '高', class: 'px-2 py-1 rounded-full text-xs bg-red-100 text-red-700' },
-  'medium': { label: '中', class: 'px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-700' },
-  'low': { label: '低', class: 'px-2 py-1 rounded-full text-xs bg-green-100 text-green-700' }
-}
-
-const priorityOptions = [
-  { label: '高', value: 'high' },
-  { label: '中', value: 'medium' },
-  { label: '低', value: 'low' }
-]
-
-const serviceTypeOptions = [
-  { label: '咨询', value: 'consultation' },
-  { label: '售后', value: 'after_sales' },
-  { label: '投诉', value: 'complaint' },
-  { label: '其他', value: 'other' }
-]
 
 const openCreateModal = () => {
   loadCustomerOptions()
@@ -316,20 +299,14 @@ const handleCreate = async () => {
   }
 }
 
-const getStatusText = (status: string) => {
-  return statusMap[status]?.label || status
-}
-
-const getStatusClass = (status: string) => {
-  return statusMap[status]?.class || 'px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700'
-}
-
-const getPriorityText = (priority: string) => {
-  return priorityMap[priority]?.label || priority
-}
-
-const getPriorityClass = (priority: string) => {
-  return priorityMap[priority]?.class || 'px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700'
+const handleDelete = async (id: number) => {
+  try {
+    await deleteService(id)
+    message.success('删除成功')
+    loadServiceList()
+  } catch (error) {
+    message.error('删除失败')
+  }
 }
 
 const loadServiceList = async () => {
@@ -362,6 +339,7 @@ const loadServiceList = async () => {
       createdAt: item.createdAt
     }))
     pagination.total = data.total || 0
+    pagination.pageCount = Math.ceil(pagination.total / pagination.pageSize) || 1
   } catch (error) {
     message.error('加载服务工单失败')
   } finally {
@@ -382,17 +360,69 @@ const handleSearch = () => {
 
 const handleReset = () => {
   searchKeyword.value = ''
-  statusFilter.value = ''
   pagination.page = 1
   loadServiceList()
 }
 
 const handlePageChange = (page: number) => {
+  const totalPages = Math.ceil(pagination.total / pagination.pageSize) || 1
+  if (page < 1) page = 1
+  if (page > totalPages) page = totalPages
   pagination.page = page
   loadServiceList()
 }
 
-import request from '@/api/request'
+const handlePageSizeChange = (pageSize: number) => {
+  pagination.pageSize = pageSize
+  pagination.page = 1
+  pagination.pageCount = Math.ceil(pagination.total / pagination.pageSize) || 1
+  loadServiceList()
+}
+
+const handleCheckedRowKeysChange = (keys: number[]) => {
+  selectedIds.value = keys
+}
+
+const handleBatchDelete = () => {
+  if (selectedIds.value.length === 0) {
+    message.warning('请选择要删除的服务单')
+    return
+  }
+  if (confirm(`确定要删除选中的 ${selectedIds.value.length} 个服务单吗？此操作不可撤销。`)) {
+    confirmBatchDelete()
+  }
+}
+
+const confirmBatchDelete = async () => {
+  try {
+    await batchDeleteServices(selectedIds.value)
+    message.success('批量删除成功')
+    selectedIds.value = []
+    loadServiceList()
+  } catch (error: any) {
+    message.error(error.message || '批量删除失败')
+  }
+}
+
+const priorityOptions = [
+  { label: '高', value: 'high' },
+  { label: '中', value: 'medium' },
+  { label: '低', value: 'low' }
+]
+
+const serviceTypeOptions = [
+  { label: '咨询', value: 'consultation' },
+  { label: '售后', value: 'after_sales' },
+  { label: '投诉', value: 'complaint' },
+  { label: '其他', value: 'other' }
+]
+
+const createStatusOptions = [
+  { label: '待处理', value: 'pending' },
+  { label: '处理中', value: 'processing' },
+  { label: '已完成', value: 'completed' },
+  { label: '已关闭', value: 'closed' }
+]
 
 onMounted(() => {
   if (route.query.filter === 'my') {
@@ -401,3 +431,29 @@ onMounted(() => {
   loadServiceList()
 })
 </script>
+
+<style scoped>
+.table-container {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.table-container :deep(.n-data-table) {
+  min-width: 100%;
+}
+
+.table-container :deep(.n-data-table-header) {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.table-container :deep(.n-data-table-fixed-left) {
+  z-index: 2;
+}
+
+.table-container :deep(.n-data-table-fixed-right) {
+  z-index: 2;
+}
+</style>

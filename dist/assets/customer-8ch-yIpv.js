@@ -1,1 +1,0 @@
-import{ai as e}from"./index-CaCqaQsm.js";const o=t=>e.get("/customers",{params:t}),u=t=>e.get(`/customers/${t}`),c=t=>e.post("/customers",t),m=(t,s)=>e.put(`/customers/${t}`,s),a=t=>e.delete(`/customers/${t}`);export{u as a,c,a as d,o as g,m as u};

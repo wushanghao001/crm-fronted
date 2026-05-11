@@ -6,6 +6,12 @@ export interface OrderItem {
   productId?: number
   productName: string
   productCode: string
+  projectCodeId?: number
+  projectCodeName?: string
+  materialCodeId?: number
+  materialCodeName?: string
+  brandCodeId?: number
+  brandCodeName?: string
   unitPrice: number
   quantity: number
   subtotal?: number

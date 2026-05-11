@@ -42,9 +42,24 @@
         <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-gray-500 dark:text-gray-400 text-sm">成交率</p>
+              <div class="flex items-center gap-1">
+                <p class="text-gray-500 dark:text-gray-400 text-sm">成交率</p>
+                <NPopover trigger="hover" placement="top">
+                  <template #trigger>
+                    <NIcon :depth="3" class="cursor-help">
+                      <InformationCircleOutline />
+                    </NIcon>
+                  </template>
+                  <div class="text-sm space-y-1 max-w-xs">
+                    <p><b>成交率计算方式：</b></p>
+                    <p>• 成交率 = 成交客户数 / 跟进客户数 × 100%</p>
+                    <p>• 跟进客户：当前时间范围内有跟进记录的客户数（去重）</p>
+                    <p>• 成交客户：跟进结果为"已成交"的客户数</p>
+                  </div>
+                </NPopover>
+              </div>
               <p class="text-3xl font-bold text-gray-800 dark:text-white mt-1">{{ performance.winRate.toFixed(1) }}%</p>
-              <p class="text-gray-400 text-xs mt-1">转化客户 / 跟进客户</p>
+              <p class="text-gray-400 text-xs mt-1">成交客户({{ performance.wonCustomerCount }}) / 跟进客户({{ performance.followCustomerCount }})</p>
             </div>
             <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
               <StatsChart class="w-6 h-6 text-purple-500" />
@@ -83,7 +98,25 @@
       </div>
 
       <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-        <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">个人转化漏斗</h3>
+        <div class="flex items-center gap-2 mb-4">
+          <h3 class="text-lg font-semibold text-gray-800 dark:text-white">个人转化漏斗</h3>
+          <NPopover trigger="hover" placement="top">
+            <template #trigger>
+              <NIcon :depth="3" class="cursor-help">
+                <InformationCircleOutline />
+              </NIcon>
+            </template>
+            <div class="text-sm space-y-2 max-w-md">
+              <p><b>漏斗各阶段说明：</b></p>
+              <p>• <b>线索</b>：当前时间范围内的跟进记录总数</p>
+              <p>• <b>跟进</b>：已完成首次有效接触的记录（初步沟通、需求确认、方案报价、商务谈判、待成交）</p>
+              <p>• <b>报价</b>：已进入方案报价阶段及之后的记录（方案报价、商务谈判、待成交）</p>
+              <p>• <b>成交</b>：跟进结果为"已成交"的记录数</p>
+              <p>• <b>流失</b>：跟进结果为"无意向"或"客户失联"的记录数</p>
+              <p class="text-gray-500 mt-2">转化率计算：各阶段数量 / 上一阶段数量 × 100%</p>
+            </div>
+          </NPopover>
+        </div>
         <div class="h-64">
           <v-chart class="h-full" :option="funnelChartOption" autoresize />
         </div>
@@ -163,13 +196,13 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { NSpin, NInput, NButton, NTag, NSelect, NPagination, NModal, NForm, NFormItem, NInputNumber, useMessage } from 'naive-ui'
+import { NSpin, NInput, NButton, NTag, NSelect, NPagination, NModal, NForm, NFormItem, NInputNumber, NPopover, NIcon, useMessage } from 'naive-ui'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart, PieChart, FunnelChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
-import { TrendingUp, People, StatsChart, BarChart } from '@vicons/ionicons5'
+import { TrendingUp, People, StatsChart, BarChart, InformationCircleOutline } from '@vicons/ionicons5'
 import { getUserPerformance, getUserPerformanceTrend, getUserOrders, updateUserTarget, type UserPerformanceData, type UserPerformanceTrend, type Order } from '@/api/userPerformance'
 
 use([CanvasRenderer, LineChart, PieChart, FunnelChart, GridComponent, TooltipComponent, LegendComponent])

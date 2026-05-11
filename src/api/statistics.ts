@@ -1,9 +1,5 @@
 import request from './request'
 
-export const getIndustryDistribution = () => {
-  return request.get('/statistics/industry-distribution')
-}
-
 export const getOverview = () => {
   return request.get('/statistics/overview')
 }
@@ -12,14 +8,18 @@ export const getCustomerTrend = () => {
   return request.get('/statistics/customer-trend')
 }
 
-export const getFunnel = () => {
-  return request.get('/statistics/funnel')
-}
-
-export const getSalesTop = () => {
-  return request.get('/statistics/sales-top')
-}
-
 export const getChurnReason = () => {
   return request.get('/statistics/churn-reason')
+}
+
+export const getUserSalesByTime = (timeType: string) => {
+  return request.get('/statistics/user-sales', { params: { timeType } })
+}
+
+export const getProductSales = (timeType?: string) => {
+  return request.get('/statistics/product-sales', { params: { timeType } })
+}
+
+export const exportReport = () => {
+  return request.getBlob('/statistics/export')
 }

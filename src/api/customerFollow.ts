@@ -51,3 +51,20 @@ export const updateFollow = (id: number, data: Partial<CustomerFollow>) => {
 export const deleteFollow = (id: number) => {
   return request.delete<void>(`/customer/follow/delete/${id}`)
 }
+
+export interface PendingTask {
+  id: number
+  title: string
+  dueDate: string
+  priority: string
+  status: string
+  customerId?: number
+  customerName?: string
+  followContent?: string
+  remark?: string
+}
+
+export const getPendingFollowTasks = (customerId?: number) => {
+  const params = customerId ? { customerId } : {}
+  return request.get<PendingTask[]>('/customer/follow/pending-tasks', { params })
+}

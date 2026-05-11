@@ -35,6 +35,11 @@ export interface CustomerResponse {
   customerLevel?: string
   createdAt: string
   updatedAt: string
+  contactName?: string
+  totalPaidAmount?: number
+  currentStage?: string
+  lastFollowTime?: string
+  followCount?: number
 }
 
 export const getCustomers = (params: { pageNum: number; pageSize: number; keyword?: string; status?: string; listType?: string }) => {
@@ -57,6 +62,18 @@ export const deleteCustomer = (id: number) => {
   return request.delete(`/customers/${id}`)
 }
 
+export const batchDeleteCustomers = (ids: number[]) => {
+  return request.delete('/customers/batch', { data: { ids } })
+}
+
 export const claimCustomer = (id: number) => {
   return request.post<CustomerResponse>(`/customers/${id}/claim`)
+}
+
+export const assignCustomer = (id: number, userId: number) => {
+  return request.post<CustomerResponse>(`/customers/${id}/assign`, { userId })
+}
+
+export const getAllUsers = () => {
+  return request.get<{ id: number; username: string; role: string }[]>('/users/all')
 }

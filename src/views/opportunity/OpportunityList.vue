@@ -5,10 +5,16 @@
         <h2 class="text-xl font-bold text-gray-800 dark:text-white">销售机会管理</h2>
         <p class="text-gray-500 dark:text-gray-400 mt-1">追踪和管理销售机会</p>
       </div>
-      <NButton type="primary" class="bg-blue-500 hover:bg-blue-600" @click="openAddModal">
-        <Add class="w-4 h-4 mr-2" />
-        添加机会
-      </NButton>
+      <div class="flex gap-3">
+        <NButton v-if="selectedIds.length > 0" type="error" @click="handleBatchDelete">
+          <DeleteIcon class="w-4 h-4 mr-2" />
+          批量删除 ({{ selectedIds.length }})
+        </NButton>
+        <NButton type="primary" class="bg-blue-500 hover:bg-blue-600" @click="openAddModal">
+          <Add class="w-4 h-4 mr-2" />
+          添加机会
+        </NButton>
+      </div>
     </div>
 
     <div v-if="authStore.user?.role !== 'admin'" class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
@@ -44,20 +50,18 @@
     </div>
 
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-      <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div class="flex flex-wrap gap-4">
-          <div class="flex-1 min-w-[200px]">
-            <NInput
-              v-model:value="searchKeyword"
-              placeholder="搜索客户名称或机会名称"
-              class="w-full"
-              @keyup.enter="handleSearch"
-            />
-          </div>
+      <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 flex-wrap gap-4">
+        <div class="flex items-center gap-4" style="min-width: 480px;">
+          <NInput
+            v-model:value="searchKeyword"
+            placeholder="搜索机会名称"
+            style="width: 200px;"
+            @keyup.enter="handleSearch"
+          />
           <NSelect
             v-model:value="stageFilter"
             placeholder="销售阶段"
-            class="w-40"
+            style="width: 120px;"
             :options="stageOptions"
           />
           <NButton type="primary" @click="handleSearch">搜索</NButton>
@@ -65,56 +69,35 @@
         </div>
       </div>
 
-      <div class="p-4">
-        <table class="w-full">
-          <thead>
-            <tr class="border-b border-gray-200">
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">机会名称</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">客户名称</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">销售阶段</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">金额</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">成功率</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">预计成交</th>
-              <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="item in opportunityList"
-              :key="item.id"
-              class="border-b border-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              <td class="py-3 px-4 text-sm text-gray-800 dark:text-gray-200">{{ item.name }}</td>
-              <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{{ item.customerName || '未知客户' }}</td>
-              <td class="py-3 px-4 text-sm">
-                <span :class="getStageClass(item.stage)">{{ getStageText(item.stage) }}</span>
-              </td>
-              <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">¥{{ item.amount }}</td>
-              <td class="py-3 px-4 text-sm">
-                <div class="flex items-center">
-                  <div class="w-16 h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
-                    <div class="h-full bg-green-500" :style="{ width: item.probability + '%' }"></div>
-                  </div>
-                  <span class="ml-2 text-sm">{{ item.probability }}%</span>
-                </div>
-              </td>
-              <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{{ item.expectedCloseDate }}</td>
-              <td class="py-3 px-4 text-sm">
-                <NButton size="small" type="primary" class="mr-2" @click="openEditModal(item)">编辑</NButton>
-                <NButton size="small" type="error" @click="handleDelete(item.id)">删除</NButton>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="p-4 flex justify-end">
-        <NPagination
-          v-model:page="pagination.page"
-          :page-size="pagination.pageSize"
-          :item-count="pagination.total"
-          @update:page="handlePageChange"
+      <div class="table-container">
+        <NDataTable
+          ref="dataTableRef"
+          :columns="columns"
+          :data="opportunityList"
+          :loading="loading"
+          :pagination="false"
+          :scroll-x="1200"
+          :scroll-y="500"
+          :row-key="(row) => row.id"
+          :checked-row-keys="selectedIds"
+          @update:checked-row-keys="handleCheckedRowKeysChange"
         />
+
+        <div class="flex items-center justify-between p-4 border-t border-gray-200 dark:border-gray-700">
+          <span class="text-sm text-gray-500">
+            共 {{ pagination.total }} 条
+          </span>
+          <NPagination
+            v-model:page="pagination.page"
+            v-model:page-size="pagination.pageSize"
+            :page-count="pagination.pageCount"
+            :page-sizes="pagination.pageSizes"
+            :show-size-picker="pagination.showSizePicker"
+            :total="pagination.total"
+            @update:page="handlePageChange"
+            @update:page-size="handlePageSizeChange"
+          />
+        </div>
       </div>
     </div>
 
@@ -181,25 +164,98 @@
         </div>
       </template>
     </NModal>
+
+    <NModal v-model:show="showViewModal" preset="card" title="销售机会详情" style="width: 600px;">
+      <div class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="text-sm text-gray-500">机会名称</label>
+            <p class="mt-1 text-gray-800 dark:text-gray-200">{{ viewData.name || '-' }}</p>
+          </div>
+          <div>
+            <label class="text-sm text-gray-500">客户名称</label>
+            <p class="mt-1 text-gray-800 dark:text-gray-200">{{ viewData.customerName || '-' }}</p>
+          </div>
+          <div>
+            <label class="text-sm text-gray-500">销售阶段</label>
+            <p class="mt-1">
+              <span :class="getStageClass(viewData.stage)">{{ getStageText(viewData.stage) }}</span>
+            </p>
+          </div>
+          <div>
+            <label class="text-sm text-gray-500">金额</label>
+            <p class="mt-1 text-gray-800 dark:text-gray-200">¥{{ viewData.amount || 0 }}</p>
+          </div>
+          <div>
+            <label class="text-sm text-gray-500">成功率</label>
+            <p class="mt-1 text-gray-800 dark:text-gray-200">{{ viewData.probability || 0 }}%</p>
+          </div>
+          <div>
+            <label class="text-sm text-gray-500">预计成交日期</label>
+            <p class="mt-1 text-gray-800 dark:text-gray-200">{{ viewData.expectedCloseDate || '-' }}</p>
+          </div>
+          <div>
+            <label class="text-sm text-gray-500">创建人</label>
+            <p class="mt-1 text-gray-800 dark:text-gray-200">{{ viewData.ownerName || '-' }}</p>
+          </div>
+          <div class="col-span-2">
+            <label class="text-sm text-gray-500">描述</label>
+            <p class="mt-1 text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{{ viewData.description || '暂无描述' }}</p>
+          </div>
+          <div>
+            <label class="text-sm text-gray-500">创建时间</label>
+            <p class="mt-1 text-gray-800 dark:text-gray-200">{{ viewData.createdAt || '-' }}</p>
+          </div>
+          <div>
+            <label class="text-sm text-gray-500">更新时间</label>
+            <p class="mt-1 text-gray-800 dark:text-gray-200">{{ viewData.updatedAt || '-' }}</p>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <div class="flex justify-end">
+          <NButton @click="showViewModal = false">关闭</NButton>
+        </div>
+      </template>
+    </NModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
-import { NButton, NInput, NSelect, NPagination, NModal, NForm, NFormItem, NDatePicker, NTooltip } from 'naive-ui'
-import { Add } from '@vicons/ionicons5'
-import { getOpportunities, createOpportunity, updateOpportunity, deleteOpportunity } from '@/api/opportunity'
+import { ref, reactive, computed, onMounted, h } from 'vue'
+import { NButton, NInput, NSelect, NPagination, NModal, NForm, NFormItem, NDatePicker, NTooltip, NDataTable, NPopconfirm } from 'naive-ui'
+import { Add, Pencil as EditIcon, Trash as DeleteIcon } from '@vicons/ionicons5'
+import { getOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, getOpportunityById, batchDeleteOpportunities } from '@/api/opportunity'
 import { message } from '@/utils/message'
 import { useAuthStore } from '@/stores/auth'
 import { getCustomers } from '@/api/customer'
 
 const authStore = useAuthStore()
+const dataTableRef = ref()
 const searchKeyword = ref('')
 const stageFilter = ref('')
 const loading = ref(false)
+const selectedIds = ref<number[]>([])
 
 const showAddModal = ref(false)
 const showEditModal = ref(false)
+const showViewModal = ref(false)
+
+const viewData = reactive({
+  id: null as number | null,
+  customerId: null as number | null,
+  customerName: '',
+  name: '',
+  stage: '',
+  amount: 0,
+  probability: 0,
+  expectedCloseDate: '',
+  description: '',
+  ownerName: '',
+  createdAt: '',
+  updatedAt: ''
+})
+
 const formData = reactive({
   customerId: null as number | null,
   customerName: '',
@@ -250,13 +306,14 @@ const handleCreate = async () => {
     return
   }
   try {
+    const expectedCloseDate = formData.expectedCloseDate ? formatDateTime(formData.expectedCloseDate) : null
     await createOpportunity({
       customerId: formData.customerId,
       name: formData.name,
       stage: formData.stage,
       amount: formData.amount,
       probability: formData.probability,
-      expectedCloseDate: formData.expectedCloseDate ? new Date(formData.expectedCloseDate).toISOString() : null,
+      expectedCloseDate,
       description: formData.description
     })
     message.success('添加成功')
@@ -297,13 +354,14 @@ const handleUpdate = async () => {
     return
   }
   try {
+    const expectedCloseDate = editFormData.expectedCloseDate ? formatDateTime(editFormData.expectedCloseDate) : null
     await updateOpportunity(editFormData.id, {
       customerId: editFormData.customerId,
       name: editFormData.name,
       stage: editFormData.stage,
       amount: editFormData.amount,
       probability: editFormData.probability,
-      expectedCloseDate: editFormData.expectedCloseDate ? new Date(editFormData.expectedCloseDate).toISOString() : null,
+      expectedCloseDate,
       description: editFormData.description
     })
     message.success('更新成功')
@@ -311,6 +369,27 @@ const handleUpdate = async () => {
     loadOpportunities()
   } catch (error) {
     message.error('更新失败')
+  }
+}
+
+const handleView = async (item: any) => {
+  try {
+    const res = await getOpportunityById(item.id) as any
+    viewData.id = res.id
+    viewData.customerId = res.customerId
+    viewData.customerName = item.customerName || ''
+    viewData.name = res.name
+    viewData.stage = res.stage
+    viewData.amount = res.amount
+    viewData.probability = res.probability
+    viewData.expectedCloseDate = res.expectedCloseDate || '-'
+    viewData.description = res.description || ''
+    viewData.ownerName = res.ownerName || '-'
+    viewData.createdAt = res.createdAt || '-'
+    viewData.updatedAt = res.updatedAt || '-'
+    showViewModal.value = true
+  } catch (error) {
+    message.error('获取详情失败')
   }
 }
 
@@ -350,7 +429,10 @@ const opportunityList = ref<any[]>([])
 const pagination = reactive({
   page: 1,
   pageSize: 10,
-  total: 0
+  pageCount: 1,
+  total: 0,
+  showSizePicker: true,
+  pageSizes: [10, 20, 50, 100]
 })
 
 const stageMap: Record<string, { label: string; class: string }> = {
@@ -367,6 +449,42 @@ const getStageText = (stage: string) => {
 
 const getStageClass = (stage: string) => {
   return stageMap[stage]?.class || 'px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700'
+}
+
+const renderActions = (row: any) => {
+  return h('div', { class: 'flex items-center gap-2' }, [
+    h(NButton, { size: 'small', type: 'primary', onClick: () => handleView(row) }, { default: () => '查看' }),
+    h(NButton, { size: 'small', type: 'info', onClick: () => openEditModal(row) }, { default: () => '编辑' }),
+    h(NButton, { size: 'small', type: 'error', onClick: () => handleDelete(row.id) }, { default: () => '删除' })
+  ])
+}
+
+const columns = [
+  { type: 'selection', width: 50, fixed: 'left' },
+  { title: '序号', key: 'index', width: 60, fixed: 'left',
+    render: (row: any, index: number) => h('span', index + 1) },
+  { title: '机会名称', key: 'name', width: 150, fixed: 'left', ellipsis: { tooltip: true } },
+  { title: '客户名称', key: 'customerName', width: 120, ellipsis: { tooltip: true } },
+  { title: '销售阶段', key: 'stage', width: 100,
+    render: (row: any) => h('span', { class: getStageClass(row.stage) }, getStageText(row.stage)) },
+  { title: '金额', key: 'amount', width: 100 },
+  { title: '成功率', key: 'probability', width: 100,
+    render: (row: any) => h('span', {}, `${row.probability || 0}%`) },
+  { title: '预计成交', key: 'expectedCloseDate', width: 120 },
+  { title: '创建人', key: 'ownerName', width: 100 },
+  { title: '操作', key: 'actions', width: 180, fixed: 'right',
+    render: (row: any) => renderActions(row) }
+]
+
+const formatDateTime = (timestamp: number): string => {
+  const date = new Date(timestamp)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
 }
 
 const loadOpportunities = async () => {
@@ -390,9 +508,11 @@ const loadOpportunities = async () => {
       probability: item.probability || 0,
       expectedCloseDate: item.expectedCloseDate || '-',
       description: item.description || '',
-      ownerId: item.ownerId
+      ownerId: item.ownerId,
+      ownerName: item.ownerName || '-'
     }))
     pagination.total = data.total || 0
+    pagination.pageCount = Math.ceil(pagination.total / pagination.pageSize) || 1
 
     updateFunnelData(data.list || [])
   } catch (error) {
@@ -441,11 +561,72 @@ const handleReset = () => {
 }
 
 const handlePageChange = (page: number) => {
+  const totalPages = Math.ceil(pagination.total / pagination.pageSize) || 1
+  if (page < 1) page = 1
+  if (page > totalPages) page = totalPages
   pagination.page = page
   loadOpportunities()
+}
+
+const handlePageSizeChange = (pageSize: number) => {
+  pagination.pageSize = pageSize
+  pagination.page = 1
+  pagination.pageCount = Math.ceil(pagination.total / pagination.pageSize) || 1
+  loadOpportunities()
+}
+
+const handleCheckedRowKeysChange = (keys: number[]) => {
+  selectedIds.value = keys
+}
+
+const handleBatchDelete = () => {
+  if (selectedIds.value.length === 0) {
+    message.warning('请选择要删除的机会')
+    return
+  }
+  if (confirm(`确定要删除选中的 ${selectedIds.value.length} 个机会吗？此操作不可撤销。`)) {
+    confirmBatchDelete()
+  }
+}
+
+const confirmBatchDelete = async () => {
+  try {
+    await batchDeleteOpportunities(selectedIds.value)
+    message.success('批量删除成功')
+    selectedIds.value = []
+    loadOpportunities()
+  } catch (error: any) {
+    message.error(error.message || '批量删除失败')
+  }
 }
 
 onMounted(() => {
   loadOpportunities()
 })
 </script>
+
+<style scoped>
+.table-container {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.table-container :deep(.n-data-table) {
+  min-width: 100%;
+}
+
+.table-container :deep(.n-data-table-header) {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.table-container :deep(.n-data-table-fixed-left) {
+  z-index: 2;
+}
+
+.table-container :deep(.n-data-table-fixed-right) {
+  z-index: 2;
+}
+</style>

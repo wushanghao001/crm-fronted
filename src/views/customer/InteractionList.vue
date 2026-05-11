@@ -595,8 +595,14 @@ const handleSubmit = async () => {
 
   submitLoading.value = true
   try {
+    let interactionTime = formData.interactionTime
+    if (interactionTime) {
+      const [date, time] = interactionTime.split('T')
+      interactionTime = `${date} ${time}:00`
+    }
     const submitData = {
       ...formData,
+      interactionTime,
       customerId: parseInt(formData.customerId),
       contactId: formData.contactId ? parseInt(formData.contactId) : null
     }

@@ -52,7 +52,7 @@
                   </div>
                   <div>
                     <p class="text-sm text-gray-500 dark:text-gray-400">客户负责人</p>
-                    <p class="mt-1 text-gray-800 dark:text-white">{{ customerInfo.ownerName || '-' }}</p>
+                    <p class="mt-1 text-gray-800 dark:text-white">{{ customerInfo.contactName || '-' }}</p>
                   </div>
                   <div>
                     <p class="text-sm text-gray-500 dark:text-gray-400">最近跟进</p>
@@ -64,7 +64,7 @@
                   </div>
                   <div>
                     <p class="text-sm text-gray-500 dark:text-gray-400">当前商机阶段</p>
-                    <p class="mt-1 text-gray-800 dark:text-white">{{ customerInfo.opportunityStage || '-' }}</p>
+                    <p class="mt-1 text-gray-800 dark:text-white">{{ getFollowResultText(customerInfo.currentStage) || '-' }}</p>
                   </div>
                   <div>
                     <p class="text-sm text-gray-500 dark:text-gray-400">客户规模</p>
@@ -72,7 +72,7 @@
                   </div>
                   <div>
                     <p class="text-sm text-gray-500 dark:text-gray-400">累计成交金额</p>
-                    <p class="mt-1 text-gray-800 dark:text-white">¥{{ formatAmount(customerInfo.totalAmount) }}</p>
+                    <p class="mt-1 text-gray-800 dark:text-white">¥{{ formatAmount(customerInfo.totalPaidAmount) }}</p>
                   </div>
                 </div>
               </div>
@@ -251,11 +251,12 @@
                 </div>
               </div>
 
-              <div v-if="nextFollowTask" class="p-4 border-t border-gray-200 dark:border-gray-700">
+              <div v-if="nextFollowTask.length > 0 && customerInfo.status !== 'churned'" class="p-4 border-t border-gray-200 dark:border-gray-700">
                 <h4 class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">下次跟进提醒</h4>
                 <div class="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3">
-                  <p class="text-sm text-gray-800 dark:text-gray-200">{{ nextFollowTask.title }}</p>
-                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ nextFollowTask.dueDate }}</p>
+                  <p class="text-sm text-gray-800 dark:text-gray-200">{{ nextFollowTask[0].title }} - {{ nextFollowTask[0].customerName || '未知客户' }}</p>
+                  <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">提醒时间: {{ nextFollowTask[0].dueDate }}</p>
+                  <p v-if="nextFollowTask[0].remark" class="text-xs text-gray-500 dark:text-gray-400 mt-1">备注: {{ nextFollowTask[0].remark }}</p>
                 </div>
               </div>
             </div>
@@ -335,10 +336,12 @@
 
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">下次跟进时间</label>
-              <input
-                v-model="formData.nextFollowTime"
-                type="datetime-local"
-                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
+              <NDatePicker
+                v-model:value="formData.nextFollowTime"
+                type="datetime"
+                placeholder="请选择日期和时间"
+                style="width: 100%;"
+                clearable
               />
             </div>
 
@@ -542,7 +545,8 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getFollowList, getFollowDetail, createFollow, updateFollow, deleteFollow, type CustomerFollow } from '@/api/customerFollow'
+import { NDatePicker } from 'naive-ui'
+import { getFollowList, getFollowDetail, createFollow, updateFollow, deleteFollow, getPendingFollowTasks, type CustomerFollow } from '@/api/customerFollow'
 import { getCustomerById } from '@/api/customer'
 
 const route = useRoute()
@@ -558,11 +562,11 @@ const customerInfo = reactive<any>({
   scale: '',
   status: '',
   customerLevel: 'C',
-  ownerName: '',
+  contactName: '',
   lastFollowTime: '',
   followCount: 0,
-  opportunityStage: '',
-  totalAmount: 0
+  currentStage: '',
+  totalPaidAmount: 0
 })
 
 const followList = ref<CustomerFollow[]>([])
@@ -576,7 +580,7 @@ const showDetailModal = ref(false)
 const isEditMode = ref(false)
 const currentFollowId = ref<number | null>(null)
 const currentFollow = ref<CustomerFollow | null>(null)
-const nextFollowTask = ref<any>(null)
+const nextFollowTask = ref<any[]>([])
 
 const uploadedFiles = ref<{ name: string; url: string }[]>([])
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -596,7 +600,7 @@ const formData = reactive({
   intentLevel: 'medium',
   content: '',
   remark: '',
-  nextFollowTime: '',
+  nextFollowTime: null as number | null,
   remindFlag: false
 })
 
@@ -607,11 +611,10 @@ const quickFormData = reactive({
 })
 
 const statusMap: Record<string, { text: string; class: string }> = {
-  active: { text: '新客户', class: 'bg-blue-100 text-blue-700' },
-  following: { text: '跟进中', class: 'bg-green-100 text-green-700' },
-  closed: { text: '已成交', class: 'bg-purple-100 text-purple-700' },
-  lost: { text: '已流失', class: 'bg-red-100 text-red-700' },
-  suspended: { text: '暂停跟进', class: 'bg-gray-100 text-gray-700' }
+  active: { text: '活跃', class: 'bg-green-100 text-green-700' },
+  potential: { text: '潜在', class: 'bg-blue-100 text-blue-700' },
+  warning: { text: '流失预警', class: 'bg-orange-100 text-orange-700' },
+  churned: { text: '已流失', class: 'bg-red-100 text-red-700' }
 }
 
 const followTypeMap: Record<string, string> = {
@@ -704,11 +707,13 @@ const loadFollowList = async () => {
   }
 }
 
-const loadNextFollowTask = async () => {
-  // Mock data - in real app would call task API
-  nextFollowTask.value = {
-    title: '请及时跟进客户',
-    dueDate: '2026-05-15 10:00:00'
+const loadNextFollowTask = async (customerId: number) => {
+  try {
+    const tasks = await getPendingFollowTasks(customerId)
+    nextFollowTask.value = tasks || []
+  } catch (error) {
+    console.error('获取待办提醒失败:', error)
+    nextFollowTask.value = []
   }
 }
 
@@ -740,7 +745,7 @@ const resetFormData = () => {
   formData.intentLevel = 'medium'
   formData.content = ''
   formData.remark = ''
-  formData.nextFollowTime = ''
+  formData.nextFollowTime = null
   formData.remindFlag = false
   uploadedFiles.value = []
 }
@@ -770,7 +775,14 @@ const submitFollow = async () => {
     }
 
     if (formData.nextFollowTime) {
-      data.nextFollowTime = new Date(formData.nextFollowTime).toISOString()
+      const date = new Date(formData.nextFollowTime)
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      const hours = String(date.getHours()).padStart(2, '0')
+      const minutes = String(date.getMinutes()).padStart(2, '0')
+      const seconds = String(date.getSeconds()).padStart(2, '0')
+      data.nextFollowTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
     }
 
     if (uploadedFiles.value.length > 0) {
@@ -786,6 +798,7 @@ const submitFollow = async () => {
     closeFollowModal()
     loadFollowList()
     loadCustomerInfo()
+    loadNextFollowTask(customerId.value)
   } catch (error) {
     console.error('提交跟进失败:', error)
     alert('提交失败，请重试')
@@ -813,6 +826,7 @@ const submitQuickFollow = async () => {
     closeQuickFollowModal()
     loadFollowList()
     loadCustomerInfo()
+    loadNextFollowTask(customerId.value)
   } catch (error) {
     console.error('提交跟进失败:', error)
     alert('提交失败，请重试')
@@ -839,7 +853,7 @@ const editFollow = (follow: CustomerFollow) => {
   formData.intentLevel = follow.intentLevel || 'medium'
   formData.content = follow.content || ''
   formData.remark = follow.remark || ''
-  formData.nextFollowTime = follow.nextFollowTime ? new Date(follow.nextFollowTime).toISOString().slice(0, 16) : ''
+  formData.nextFollowTime = follow.nextFollowTime ? new Date(follow.nextFollowTime).getTime() : null
   formData.remindFlag = follow.remindFlag || false
   showFollowModal.value = true
 }
@@ -850,6 +864,7 @@ const deleteFollowConfirm = async (id: number) => {
     await deleteFollow(id)
     loadFollowList()
     loadCustomerInfo()
+    loadNextFollowTask(customerId.value)
   } catch (error) {
     console.error('删除跟进失败:', error)
     alert('删除失败，请重试')
@@ -891,6 +906,6 @@ const removeFile = (index: number) => {
 onMounted(() => {
   loadCustomerInfo()
   loadFollowList()
-  loadNextFollowTask()
+  loadNextFollowTask(customerId.value)
 })
 </script>

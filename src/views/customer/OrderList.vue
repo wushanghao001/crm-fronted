@@ -263,7 +263,9 @@
               <thead class="bg-gray-50">
                 <tr>
                   <th class="py-2 px-3 text-left">商品名称</th>
-                  <th class="py-2 px-3 text-left">商品编码</th>
+                  <th class="py-2 px-3 text-left">项目号</th>
+                  <th class="py-2 px-3 text-left">料号</th>
+                  <th class="py-2 px-3 text-left">牌号</th>
                   <th class="py-2 px-3 text-right">单价</th>
                   <th class="py-2 px-3 text-center">数量</th>
                   <th class="py-2 px-3 text-right">小计</th>
@@ -273,7 +275,9 @@
               <tbody>
                 <tr v-for="(item, index) in createForm.items" :key="index" class="border-t border-gray-100">
                   <td class="py-2 px-3">{{ item.productName }}</td>
-                  <td class="py-2 px-3 font-mono text-xs">{{ item.productCode }}</td>
+                  <td class="py-2 px-3 text-xs">{{ item.projectCodeName || '-' }}</td>
+                  <td class="py-2 px-3 text-xs">{{ item.materialCodeName || '-' }}</td>
+                  <td class="py-2 px-3 text-xs">{{ item.brandCodeName || '-' }}</td>
                   <td class="py-2 px-3 text-right">¥{{ item.unitPrice.toLocaleString() }}</td>
                   <td class="py-2 px-3 text-center">
                     <NInputNumber v-model:value="item.quantity" :min="1" size="small" class="w-20" />
@@ -317,31 +321,45 @@
       </template>
     </NModal>
 
-    <NModal v-model:show="showProductModal" preset="card" title="选择商品" style="width: 600px;">
+    <NModal v-model:show="showProductModal" preset="card" title="选择商品" style="width: 900px;">
       <div class="mb-4">
         <NInput v-model:value="productSearchKeyword" placeholder="搜索商品名称或编码" @keyup.enter="loadProductsForSelection" />
       </div>
-      <div class="max-h-64 overflow-y-auto border border-gray-200 rounded-lg">
+      <div class="max-h-80 overflow-y-auto border border-gray-200 rounded-lg">
         <table class="w-full text-sm">
           <thead class="bg-gray-50 sticky top-0">
             <tr>
               <th class="py-2 px-3 text-left">选择</th>
               <th class="py-2 px-3 text-left">商品名称</th>
-              <th class="py-2 px-3 text-left">商品编码</th>
+              <th class="py-2 px-3 text-left">项目号</th>
+              <th class="py-2 px-3 text-left">料号</th>
+              <th class="py-2 px-3 text-left">牌号</th>
               <th class="py-2 px-3 text-right">价格</th>
+              <th class="py-2 px-3 text-right">可售库存</th>
               <th class="py-2 px-3 text-center">数量</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="product in availableProducts" :key="product.id" class="border-t border-gray-100 hover:bg-gray-50 cursor-pointer" @click="handleSelectProduct(product)">
+            <tr v-for="product in availableProducts" :key="product.id"
+                :class="{'opacity-50 cursor-not-allowed': (product.availableStock ?? 0) < 1}"
+                class="border-t border-gray-100 hover:bg-gray-50 cursor-pointer"
+                @click="(product.availableStock ?? 0) >= 1 && handleSelectProduct(product)">
               <td class="py-2 px-3">
-                <NCheckbox :checked="isProductSelected(product.id)" />
+                <NCheckbox :checked="isProductSelected(product.id)" :disabled="(product.availableStock ?? 0) < 1" />
               </td>
-              <td class="py-2 px-3">{{ product.name }}</td>
-              <td class="py-2 px-3 font-mono text-xs">{{ product.code }}</td>
+              <td class="py-2 px-3">
+                {{ product.name }}
+                <span v-if="(product.availableStock ?? 0) <= (product.safeStock ?? 5)" class="ml-1 text-xs text-red-500">⚠️</span>
+              </td>
+              <td class="py-2 px-3 text-xs">{{ product.projectCodeName || '-' }}</td>
+              <td class="py-2 px-3 text-xs">{{ product.materialCodeName || '-' }}</td>
+              <td class="py-2 px-3 text-xs">{{ product.brandCodeName || '-' }}</td>
               <td class="py-2 px-3 text-right">¥{{ product.price.toLocaleString() }}</td>
+              <td class="py-2 px-3 text-right" :class="(product.availableStock ?? 0) <= (product.safeStock ?? 5) ? 'text-red-500' : 'text-gray-500'">
+                {{ product.availableStock ?? 0 }}
+              </td>
               <td class="py-2 px-3 text-center" @click.stop>
-                <NInputNumber v-model:value="product.quantity" :min="1" size="small" class="w-20" />
+                <NInputNumber v-model:value="product.quantity" :min="1" :max="product.availableStock" size="small" class="w-20" />
               </td>
             </tr>
           </tbody>
@@ -446,7 +464,9 @@
               <thead>
                 <tr class="text-left text-sm">
                   <th class="pb-2 text-gray-500">商品名称</th>
-                  <th class="pb-2 text-gray-500">商品编码</th>
+                  <th class="pb-2 text-gray-500">项目号</th>
+                  <th class="pb-2 text-gray-500">料号</th>
+                  <th class="pb-2 text-gray-500">牌号</th>
                   <th class="pb-2 text-gray-500">单价</th>
                   <th class="pb-2 text-gray-500">数量</th>
                   <th class="pb-2 text-gray-500">小计</th>
@@ -455,7 +475,9 @@
               <tbody>
                 <tr v-for="item in detailData.items" :key="item.id" class="text-sm">
                   <td class="py-2">{{ item.productName }}</td>
-                  <td class="py-2 font-mono">{{ item.productCode }}</td>
+                  <td class="py-2 text-xs">{{ item.projectCodeName || '-' }}</td>
+                  <td class="py-2 text-xs">{{ item.materialCodeName || '-' }}</td>
+                  <td class="py-2 text-xs">{{ item.brandCodeName || '-' }}</td>
                   <td class="py-2">¥{{ item.unitPrice.toLocaleString() }}</td>
                   <td class="py-2">{{ item.quantity }}</td>
                   <td class="py-2 font-medium">¥{{ item.subtotal.toLocaleString() }}</td>
@@ -686,6 +708,12 @@ const handleConfirmProductSelection = () => {
         productId: p.id,
         productName: p.name,
         productCode: p.code,
+        projectCodeId: p.projectCodeId,
+        projectCodeName: p.projectCodeName,
+        materialCodeId: p.materialCodeId,
+        materialCodeName: p.materialCodeName,
+        brandCodeId: p.brandCodeId,
+        brandCodeName: p.brandCodeName,
         unitPrice: p.price,
         quantity: existing ? existing.quantity : (p.quantity || 1)
       }
@@ -736,8 +764,9 @@ const handleCreateSubmit = async () => {
     message.success('创建成功')
     showCreateModal.value = false
     loadOrders()
-  } catch (error) {
-    message.error('创建失败')
+  } catch (error: any) {
+    const message = error?.response?.data?.message || error?.message || '创建失败'
+    message.error(message)
   }
 }
 

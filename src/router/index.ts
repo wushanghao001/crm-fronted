@@ -125,6 +125,24 @@ const routes: RouteRecordRaw[] = [
         meta: { requiresAuth: true, permission: 'product:view' }
       },
       {
+        path: 'project-codes',
+        name: 'ProjectCodeList',
+        component: () => import('@/views/archive/ProjectCodeList.vue'),
+        meta: { requiresAuth: true, permission: 'projectcode:view' }
+      },
+      {
+        path: 'material-codes',
+        name: 'MaterialCodeList',
+        component: () => import('@/views/archive/MaterialCodeList.vue'),
+        meta: { requiresAuth: true, permission: 'materialcode:view' }
+      },
+      {
+        path: 'brand-codes',
+        name: 'BrandCodeList',
+        component: () => import('@/views/archive/BrandCodeList.vue'),
+        meta: { requiresAuth: true, permission: 'brandcode:view' }
+      },
+      {
         path: 'statistics',
         name: 'Statistics',
         component: () => import('@/views/statistics/Statistics.vue'),

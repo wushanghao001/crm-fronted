@@ -5,8 +5,8 @@
         <h2 class="text-xl font-bold text-gray-800 dark:text-white">统计分析</h2>
         <p class="text-gray-500 dark:text-gray-400 mt-1">数据报表和业务分析</p>
       </div>
-      <NButton type="primary" @click="handleExport" class="bg-blue-500 hover:bg-blue-600">
-        <DownloadIcon class="w-4 h-4 mr-2" />
+      <NButton type="primary" @click="handleExport" class="rounded-lg px-5 py-2.5 text-sm font-medium shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2">
+        <DownloadIcon class="w-4 h-4" />
         导出报表
       </NButton>
     </div>
@@ -67,6 +67,35 @@
         </div>
         <p class="text-gray-500 dark:text-gray-400 text-sm mt-2">{{ overview.totalCustomers || 0 }} 总客户数</p>
       </div>
+
+      <div v-if="lowStockProducts.length > 0" class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-red-200 dark:border-red-700">
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-2">
+            <div class="w-10 h-10 bg-red-100 dark:bg-red-900 rounded-lg flex items-center justify-center">
+              <WarningIcon class="w-5 h-5 text-red-500" />
+            </div>
+            <div>
+              <p class="text-gray-800 dark:text-white font-semibold">库存预警</p>
+              <p class="text-gray-500 dark:text-gray-400 text-xs">{{ lowStockProducts.length }} 个产品低于安全库存</p>
+            </div>
+          </div>
+          <NButton size="small" type="error" @click="goToProductManagement">
+            立即处理
+          </NButton>
+        </div>
+        <div class="space-y-2 max-h-32 overflow-y-auto">
+          <div v-for="product in lowStockProducts.slice(0, 5)" :key="product.id" class="flex items-center justify-between text-sm py-1 border-b border-gray-100 dark:border-gray-700 last:border-0">
+            <div>
+              <span class="text-gray-700 dark:text-gray-300">{{ product.name }}</span>
+              <span class="ml-2 text-xs text-gray-400">{{ product.code }}</span>
+            </div>
+            <div class="text-right">
+              <span class="text-red-500 font-medium">{{ product.availableStock ?? 0 }}</span>
+              <span class="text-gray-400 text-xs"> / 安全库存 {{ product.safeStock ?? 5 }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
     
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -74,34 +103,46 @@
         <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">销售趋势</h3>
         <v-chart class="h-64" :option="salesChartOption" autoresize />
       </div>
-      
+
       <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-        <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">客户行业分布</h3>
-        <v-chart class="h-64" :option="industryChartOption" autoresize />
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold text-gray-800 dark:text-white">产品销售排行</h3>
+          <div class="flex gap-2">
+            <button
+              v-for="item in timeOptions"
+              :key="item.value"
+              @click="handleProductTimeChange(item.value)"
+              :class="['px-3 py-1 text-sm rounded-lg transition-colors', productTimeType === item.value ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200']"
+            >
+              {{ item.label }}
+            </button>
+          </div>
+        </div>
+        <v-chart class="h-64" :option="productChartOption" autoresize />
       </div>
     </div>
-    
+
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-        <div class="flex items-center gap-2 mb-4">
-          <h3 class="text-lg font-semibold text-gray-800 dark:text-white">销售漏斗</h3>
-          <NTooltip>
-            <template #trigger>
-              <span class="text-gray-400 cursor-help">ⓘ</span>
-            </template>
-            <div class="text-sm leading-relaxed">
-              <p class="font-medium mb-2">各阶段含义：</p>
-              <p>• <b>线索</b>：所有跟进记录的数量</p>
-              <p>• <b>跟进</b>：已进行有效沟通的客户（初步沟通、需求确认、方案报价、商务谈判、待成交）</p>
-              <p>• <b>报价</b>：已进入报价阶段的客户（方案报价、商务谈判、待成交）</p>
-              <p>• <b>成交</b>：最终成交的客户</p>
-              <p>• <b>流失</b>：明确表示无意向或客户失联（无意向、客户失联）</p>
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold text-gray-800 dark:text-white">用户销售金额统计</h3>
+          <div class="flex items-center gap-3">
+            <NSelect v-model:value="topN" :options="topNOptions" size="small" style="width: 100px;" />
+            <div class="flex gap-2">
+              <button
+                v-for="item in timeOptions"
+                :key="item.value"
+                @click="handleTimeChange(item.value)"
+                :class="['px-3 py-1 text-sm rounded-lg transition-colors', timeType === item.value ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200']"
+              >
+                {{ item.label }}
+              </button>
             </div>
-          </NTooltip>
+          </div>
         </div>
-        <v-chart class="h-64" :option="funnelChartOption" autoresize />
+        <v-chart class="h-64" :option="userSalesChartOption" autoresize />
       </div>
-      
+
       <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
         <div class="flex items-center gap-2 mb-4">
           <h3 class="text-lg font-semibold text-gray-800 dark:text-white">流失原因分析</h3>
@@ -123,24 +164,44 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { NButton, NTooltip } from 'naive-ui'
+import { ref, computed, onMounted, watch } from 'vue'
+import { NButton, NTooltip, NSelect } from 'naive-ui'
 import { message } from '@/utils/message'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { LineChart, PieChart, FunnelChart, BarChart } from 'echarts/charts'
+import { LineChart, PieChart, BarChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
-import { People, TrendingUp, Briefcase, Warning, Download } from '@vicons/ionicons5'
-import { getIndustryDistribution, getOverview, getCustomerTrend, getFunnel, getChurnReason } from '@/api/statistics'
+import { People, TrendingUp, Briefcase, Warning as WarningIcon, Download } from '@vicons/ionicons5'
+import { getOverview, getCustomerTrend, getChurnReason, getUserSalesByTime, getProductSales, exportReport } from '@/api/statistics'
+import { getLowStockProducts } from '@/api/stock'
+import { useRouter } from 'vue-router'
 
-use([CanvasRenderer, LineChart, PieChart, FunnelChart, BarChart, GridComponent, TooltipComponent, LegendComponent])
+use([CanvasRenderer, LineChart, PieChart, BarChart, GridComponent, TooltipComponent, LegendComponent])
+
+const router = useRouter()
 
 const overview = ref<any>({})
-const industryChartOption = ref({})
+const lowStockProducts = ref<any[]>([])
 const salesChartOption = ref({})
-const funnelChartOption = ref({})
 const churnChartOption = ref({})
+const userSalesChartOption = ref({})
+const productChartOption = ref({})
+const timeType = ref('month')
+const productTimeType = ref('month')
+const topN = ref(5)
+const topNOptions = [
+  { label: 'Top5', value: 5 },
+  { label: 'Top10', value: 10 },
+  { label: 'Top20', value: 20 },
+  { label: '全部', value: 0 }
+]
+const timeOptions = [
+  { label: '每日', value: 'day' },
+  { label: '本周', value: 'week' },
+  { label: '本月', value: 'month' },
+  { label: '本季', value: 'quarter' }
+]
 
 const customerGrowthText = computed(() => {
   const rate = parseFloat(overview.value.customerGrowthRate || 0)
@@ -184,46 +245,6 @@ onMounted(async () => {
   }
 
   try {
-    const distribution = await getIndustryDistribution() as any[]
-    if (distribution && distribution.length > 0) {
-      industryChartOption.value = {
-        tooltip: { trigger: 'item' },
-        legend: { orient: 'vertical', right: '5%', top: 'center' },
-        series: [{
-          type: 'pie',
-          radius: ['40%', '70%'],
-          avoidLabelOverlap: false,
-          itemStyle: { borderRadius: 10 },
-          label: { show: false },
-          emphasis: { label: { show: true, fontSize: 18 } },
-          data: distribution.map((item: any) => ({
-            value: item.value,
-            name: item.name
-          }))
-        }]
-      }
-    } else {
-      industryChartOption.value = {
-        tooltip: { trigger: 'item' },
-        legend: { orient: 'vertical', right: '5%', top: 'center' },
-        series: [{
-          type: 'pie',
-          radius: ['40%', '70%'],
-          avoidLabelOverlap: false,
-          itemStyle: { borderRadius: 10 },
-          label: { show: false },
-          emphasis: { label: { show: true, fontSize: 18 } },
-          data: [
-            { value: 0, name: '暂无数据' }
-          ]
-        }]
-      }
-    }
-  } catch (error) {
-    console.error('获取行业分布数据失败', error)
-  }
-
-  try {
     const trendData = await getCustomerTrend() as any[]
     if (trendData && trendData.length > 0) {
       salesChartOption.value = {
@@ -259,43 +280,6 @@ onMounted(async () => {
   }
 
   try {
-    const funnelData = await getFunnel() as any
-    if (funnelData) {
-      const leads = funnelData.leads || 0
-      const contacted = funnelData.contacted || 0
-      const quoted = funnelData.quoted || 0
-      const won = funnelData.won || 0
-      funnelChartOption.value = {
-        tooltip: { trigger: 'item', formatter: '{b}: {c}' },
-        series: [{
-          type: 'funnel',
-          left: '10%',
-          top: 60,
-          bottom: 60,
-          width: '80%',
-          min: 0,
-          max: leads > 0 ? leads : 100,
-          minSize: '0%',
-          maxSize: '100%',
-          sort: 'descending',
-          gap: 2,
-          label: { show: true, position: 'inside' },
-          labelLine: { length: 10, lineStyle: { width: 1 } },
-          itemStyle: { borderColor: '#fff', borderWidth: 1 },
-          data: [
-            { value: leads, name: '线索', itemStyle: { color: '#3b82f6' } },
-            { value: contacted, name: '跟进', itemStyle: { color: '#60a5fa' } },
-            { value: quoted, name: '报价', itemStyle: { color: '#93c5fd' } },
-            { value: won, name: '成交', itemStyle: { color: '#dbeafe' } }
-          ]
-        }]
-      }
-    }
-  } catch (error) {
-    console.error('获取漏斗数据失败', error)
-  }
-
-  try {
     const churnData = await getChurnReason() as any[]
     if (churnData && churnData.length > 0) {
       churnChartOption.value = {
@@ -326,9 +310,213 @@ onMounted(async () => {
   } catch (error) {
     console.error('获取流失原因数据失败', error)
   }
+
+  await loadUserSalesData()
+  await loadProductSalesData()
+
+  try {
+    const lowStockData = await getLowStockProducts() as any[]
+    lowStockProducts.value = lowStockData || []
+  } catch (error) {
+    console.error('获取库存预警数据失败', error)
+  }
 })
 
-const handleExport = () => {
-  message.success('报表导出成功')
+const loadUserSalesData = async () => {
+  try {
+    const data = await getUserSalesByTime(timeType.value) as any[]
+    if (data && data.length > 0) {
+      const sortedData = [...data].sort((a, b) => {
+        const amountA = typeof a.amount === 'string' ? parseFloat(a.amount) : (a.amount || 0)
+        const amountB = typeof b.amount === 'string' ? parseFloat(b.amount) : (b.amount || 0)
+        return amountB - amountA
+      })
+
+      let displayData = sortedData
+      if (topN.value > 0) {
+        displayData = sortedData.slice(0, topN.value)
+      }
+
+      const needScroll = displayData.length > 8
+      const chartHeight = needScroll ? Math.max(300, displayData.length * 35) : 256
+
+      userSalesChartOption.value = {
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'shadow' },
+          formatter: (params: any) => {
+            const item = params[0]
+            const rank = sortedData.findIndex((d: any) => d.userName === item.name) + 1
+            const rankText = rank > 0 ? `<br/><span style="color: #666;">排名：第${rank}名</span>` : ''
+            return `<b>${item.name}</b><br/>销售额：¥${item.value.toLocaleString()}${rankText}`
+          }
+        },
+        grid: { left: '3%', right: '4%', bottom: needScroll ? '15%' : '3%', containLabel: true, height: chartHeight },
+        xAxis: {
+          type: 'category',
+          data: displayData.map((item: any) => item.userName),
+          axisLabel: {
+            interval: 0,
+            rotate: displayData.length > 8 ? 30 : 0,
+            fontSize: 11
+          }
+        },
+        yAxis: { 
+          type: 'value',
+          max: (value: any) => {
+            const maxVal = value.max
+            const extra = maxVal * 0.2
+            return Math.ceil((maxVal + extra) / 50000) * 50000
+          },
+          interval: 50000,
+          axisLabel: {
+            formatter: (value: number) => {
+              if (value >= 10000) {
+                return (value / 10000).toFixed(0) + '万'
+              }
+              return value.toString()
+            }
+          }
+        },
+        series: [{
+          type: 'bar',
+          data: displayData.map((item: any) => {
+            const amount = typeof item.amount === 'string' ? parseFloat(item.amount) : (item.amount || 0)
+            return amount
+          }),
+          itemStyle: {
+            borderRadius: [4, 4, 0, 0],
+            color: (params: any) => {
+              return params.name === '其他'
+                ? '#94a3b8'
+                : {
+                    type: 'linear',
+                    x: 0, y: 0, x2: 0, y2: 1,
+                    colorStops: [
+                      { offset: 0, color: '#3b82f6' },
+                      { offset: 1, color: '#60a5fa' }
+                    ]
+                  }
+            }
+          },
+          barWidth: '50%'
+        }]
+      }
+    } else {
+      userSalesChartOption.value = {
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+        xAxis: { type: 'category', data: ['暂无数据'] },
+        yAxis: { type: 'value' },
+        series: [{
+          type: 'bar',
+          data: [0],
+          itemStyle: { borderRadius: [4, 4, 0, 0] }
+        }]
+      }
+    }
+  } catch (error) {
+    console.error('获取用户销售数据失败', error)
+  }
+}
+
+const loadProductSalesData = async (timeType?: string) => {
+  try {
+    const data = await getProductSales(timeType) as any[]
+    if (data && data.length > 0) {
+      const sortedData = [...data].sort((a, b) => {
+        const qtyA = typeof a.quantity === 'string' ? parseFloat(a.quantity) : (a.quantity || 0)
+        const qtyB = typeof b.quantity === 'string' ? parseFloat(b.quantity) : (b.quantity || 0)
+        return qtyB - qtyA
+      })
+
+      productChartOption.value = {
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: '{b}: {c}件' },
+        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+        xAxis: { type: 'category', data: sortedData.map((item: any) => item.productName || item.name) },
+        yAxis: { type: 'value' },
+        series: [{
+          type: 'bar',
+          data: sortedData.map((item: any) => {
+            const qty = typeof item.quantity === 'string' ? parseFloat(item.quantity) : (item.quantity || 0)
+            return qty
+          }),
+          itemStyle: {
+            borderRadius: [4, 4, 0, 0],
+            color: {
+              type: 'linear',
+              x: 0, y: 0, x2: 0, y2: 1,
+              colorStops: [
+                { offset: 0, color: '#3b82f6' },
+                { offset: 1, color: '#93c5fd' }
+              ]
+            }
+          },
+          barWidth: '50%'
+        }]
+      }
+    } else {
+      productChartOption.value = {
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+        xAxis: { type: 'category', data: ['暂无数据'] },
+        yAxis: { type: 'value' },
+        series: [{
+          type: 'bar',
+          data: [0],
+          itemStyle: { borderRadius: [4, 4, 0, 0] }
+        }]
+      }
+    }
+  } catch (error) {
+    console.error('获取产品销售数据失败', error)
+  }
+}
+
+const handleTimeChange = async (type: string) => {
+  timeType.value = type
+  await loadUserSalesData()
+}
+
+const handleProductTimeChange = async (type: string) => {
+  productTimeType.value = type
+  await loadProductSalesData(type)
+}
+
+watch(topN, () => {
+  loadUserSalesData()
+})
+
+const handleExport = async () => {
+  try {
+    message.success('正在生成报表，请稍候...')
+    const response: any = await exportReport()
+    const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    link.download = `统计分析报表_${year}年${month}月.xlsx`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    message.success('报表导出成功')
+  } catch (error: any) {
+    console.error('Export error:', error)
+    if (error.response) {
+      message.error('导出失败，请稍后重试或联系管理员')
+    } else if (error.request) {
+      message.error('网络异常，请检查网络连接')
+    } else {
+      message.error('导出失败，请稍后重试')
+    }
+  }
+}
+
+const goToProductManagement = () => {
+  router.push({ name: 'ProductList', query: { lowStock: 'true' } })
 }
 </script>

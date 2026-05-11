@@ -7,6 +7,9 @@ export interface Product {
   category: string
   price: number
   stock: number
+  availableStock: number
+  lockedStock: number
+  safeStock: number
   description: string
   status: number
   createdAt: string

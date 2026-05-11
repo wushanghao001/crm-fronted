@@ -40,3 +40,7 @@ export const updateOpportunity = (id: number, data: Partial<Opportunity>) => {
 export const deleteOpportunity = (id: number) => {
   return request.delete(`/opportunities/${id}`)
 }
+
+export const batchDeleteOpportunities = (ids: number[]) => {
+  return request.delete('/opportunities/batch', { data: { ids } })
+}

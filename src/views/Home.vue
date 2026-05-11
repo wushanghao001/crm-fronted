@@ -109,21 +109,31 @@
           <NButton size="small" type="primary" @click="showAddTaskModal = true">新增</NButton>
         </div>
         <div class="space-y-3">
-          <div v-for="task in myTasks" :key="task.id" class="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
-            <input type="checkbox" :checked="task.status === 'completed'" @change="toggleTask(task)" class="w-4 h-4 rounded border-gray-300" />
-            <div class="flex-1">
-              <p class="text-gray-800 dark:text-white" :class="{ 'line-through text-gray-400': task.status === 'completed' }">{{ task.title }}</p>
-              <p class="text-xs text-gray-400">{{ task.dueDate }}</p>
+          <div v-for="task in myTasks" :key="task.id" class="flex items-start space-x-3 p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+            <input type="checkbox" :checked="task.status === 'completed'" @change="toggleTask(task)" class="w-4 h-4 rounded border-gray-300 mt-0.5" />
+            <div class="flex-1 min-w-0">
+              <p class="text-gray-800 dark:text-white font-medium truncate" :class="{ 'line-through text-gray-400': task.status === 'completed' }">{{ task.title }}</p>
+              <p v-if="task.remark" class="text-sm text-gray-500 dark:text-gray-400 mt-1 truncate">备注: {{ task.remark }}</p>
+              <div class="flex items-center gap-2 mt-2">
+                <span class="text-xs text-gray-400 flex items-center gap-1">
+                  <Time class="w-3 h-3" />
+                  {{ task.dueDate }}
+                </span>
+                <span v-if="task.taskType === 'follow'" class="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">跟进任务</span>
+                <span v-else-if="task.taskType === 'personal'" class="text-xs px-2 py-0.5 bg-gray-100 text-gray-700 rounded">个人事务</span>
+              </div>
             </div>
-            <span
-              class="px-2 py-1 rounded text-xs font-medium"
-              :class="{
-                'bg-red-100 text-red-700': task.priority === 'high',
-                'bg-yellow-100 text-yellow-700': task.priority === 'medium',
-                'bg-green-100 text-green-700': task.priority === 'low'
-              }"
-            >{{ task.priority === 'high' ? '高' : task.priority === 'medium' ? '中' : '低' }}</span>
-            <NButton size="tiny" type="error" @click="handleDeleteTask(task)">删除</NButton>
+            <div class="flex items-center gap-2">
+              <span
+                class="px-2 py-1 rounded text-xs font-medium"
+                :class="{
+                  'bg-red-100 text-red-700': task.priority === 'high',
+                  'bg-yellow-100 text-yellow-700': task.priority === 'medium',
+                  'bg-green-100 text-green-700': task.priority === 'low'
+                }"
+              >{{ task.priority === 'high' ? '高' : task.priority === 'medium' ? '中' : '低' }}</span>
+              <NButton size="tiny" type="error" @click="handleDeleteTask(task)">删除</NButton>
+            </div>
           </div>
           <div v-if="myTasks.length === 0" class="text-center text-gray-400 py-4">暂无待办任务</div>
         </div>
@@ -327,13 +337,43 @@ const loadMyTasks = async () => {
     myTasks.value = (res?.list || []).map((item: any) => ({
       id: item.id,
       title: item.title,
-      dueDate: item.dueDate ? new Date(item.dueDate).toLocaleDateString() : '',
-      priority: item.priority,
-      status: item.status
+      remark: item.content || item.remark,
+      dueDate: formatDateTime(item.dueDate),
+      priority: item.priority || 'medium',
+      status: item.status,
+      taskType: item.taskType
     }))
   } catch (error) {
     console.error('Failed to load tasks:', error)
   }
+}
+
+const formatDateTime = (dateStr: string) => {
+  if (!dateStr) return '无截止日期'
+  try {
+    const date = new Date(dateStr)
+    if (isNaN(date.getTime())) return '无效日期'
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })
+  } catch {
+    return dateStr
+  }
+}
+
+const formatDateTimeToBackend = (date: Date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
 }
 
 const handleAddTask = async () => {
@@ -342,9 +382,10 @@ const handleAddTask = async () => {
     return
   }
   try {
+    const dueDateStr = taskForm.dueDate ? formatDateTimeToBackend(new Date(taskForm.dueDate)) : undefined
     await createTask({
       title: taskForm.title,
-      dueDate: taskForm.dueDate ? new Date(taskForm.dueDate).toISOString() : undefined,
+      dueDate: dueDateStr,
       priority: taskForm.priority
     })
     message.success('创建成功')
@@ -380,7 +421,7 @@ const toggleTask = async (task: any) => {
 const loadRecentFollows = async () => {
   if (authStore.user?.role === 'admin') return
   try {
-    const res: any = await getFollowList({ pageNum: 1, pageSize: 5 })
+    const res: any = await getFollowList({ pageNum: 1, pageSize: 3 })
     const list = res?.list || []
     recentInteractions.value = list.map((item: any) => ({
       customerName: item.customerName || '未知客户',
