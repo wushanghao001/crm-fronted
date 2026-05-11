@@ -1,1 +1,0 @@
-import{aq as t}from"./index-DdIGAe-A.js";const c=e=>t.get("/project-codes",{params:e}),s=e=>t.post("/project-codes",e),d=(e,o)=>t.put(`/project-codes/${e}`,o),p=e=>t.delete(`/project-codes/${e}`);export{s as c,p as d,c as g,d as u};

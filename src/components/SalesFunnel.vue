@@ -121,7 +121,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { FunnelChart } from 'echarts/charts'
@@ -134,8 +134,20 @@ import type { FunnelData, TrendData, CustomerBrief } from '@/api/funnel'
 
 use([CanvasRenderer, FunnelChart, LineChart, GridComponent, TooltipComponent, LegendComponent])
 
+const props = defineProps<{
+  externalFunnelData?: FunnelData | null
+  externalTrendData?: TrendData | null
+  externalTimeRange?: string
+  autoLoad?: boolean
+}>()
+
+const emit = defineEmits<{
+  (e: 'timeRangeChange', value: string): void
+  (e: 'funnelClick', params: any): void
+}>()
+
 const loading = ref(false)
-const timeRange = ref('today')
+const timeRange = ref(props.externalTimeRange || 'today')
 const funnelData = ref<FunnelData>({
   leads: 0,
   contacted: 0,
@@ -348,7 +360,11 @@ const loadAllData = async () => {
 
 const handleTimeChange = (value: string) => {
   timeRange.value = value
-  loadAllData()
+  if (props.externalFunnelData && props.externalTrendData) {
+    emit('timeRangeChange', value)
+  } else {
+    loadAllData()
+  }
 }
 
 const handleFunnelClick = (params: any) => {
@@ -381,6 +397,12 @@ const loadStageCustomers = async () => {
 }
 
 onMounted(() => {
-  loadAllData()
+  if (props.externalFunnelData && props.externalFunnelData.leads > 0) {
+    funnelData.value = props.externalFunnelData
+    trendData.value = props.externalTrendData!
+    loading.value = false
+  } else {
+    loadAllData()
+  }
 })
 </script>

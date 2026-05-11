@@ -1,0 +1,1 @@
+import{aq as r}from"./index-Xr_SMShl.js";const a=e=>r.get("/brand-codes",{params:e}),n=e=>r.post("/brand-codes",e),o=(e,d)=>r.put(`/brand-codes/${e}`,d),s=e=>r.delete(`/brand-codes/${e}`);export{n as c,s as d,a as g,o as u};

@@ -62,7 +62,12 @@
       </div>
     </div>
 
-    <SalesFunnel v-if="authStore.user?.role !== 'admin'" />
+    <SalesFunnel
+      v-if="authStore.user?.role !== 'admin' && funnelReady"
+      :external-funnel-data="funnelData"
+      :external-trend-data="trendData"
+      :auto-load="false"
+    />
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div v-if="authStore.user?.role === 'admin'" class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
@@ -182,6 +187,7 @@ import { useAuthStore } from '@/stores/auth'
 import request from '@/api/request'
 import { getFollowList } from '@/api/customerFollow'
 import { getTaskList, createTask, deleteTask, toggleTaskStatus } from '@/api/task'
+import { getFunnelData, getTrendData } from '@/api/funnel'
 import { message as messageUtil } from '@/utils/message'
 
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent])
@@ -190,11 +196,32 @@ const router = useRouter()
 const authStore = useAuthStore()
 const message = messageUtil
 
+const funnelLoading = ref(false)
+const funnelReady = ref(false)
 const statistics = reactive({
   customers: 0,
   newCustomers: 0,
   opportunities: 0,
   pendingServices: 0
+})
+
+const funnelData = ref<any>({
+  leads: 0,
+  contacted: 0,
+  quoted: 0,
+  won: 0,
+  lost: 0,
+  contactRate: 0,
+  quoteRate: 0,
+  winRate: 0,
+  totalWinRate: 0
+})
+
+const trendData = ref<any>({
+  dates: [],
+  wonData: [],
+  lostData: [],
+  totalData: []
 })
 
 const personalStats = reactive({
@@ -310,6 +337,44 @@ const loadPersonalStats = async () => {
   }
 }
 
+const loadFunnelData = async () => {
+  if (authStore.user?.role !== 'admin') {
+    funnelLoading.value = true
+    try {
+      const [funnelRes, trendRes] = await Promise.all([
+        getFunnelData('today'),
+        getTrendData('today')
+      ])
+      if (funnelRes) {
+        funnelData.value = {
+          leads: funnelRes.leads ?? 0,
+          contacted: funnelRes.contacted ?? 0,
+          quoted: funnelRes.quoted ?? 0,
+          won: funnelRes.won ?? 0,
+          lost: funnelRes.lost ?? 0,
+          contactRate: funnelRes.contactRate ?? 0,
+          quoteRate: funnelRes.quoteRate ?? 0,
+          winRate: funnelRes.winRate ?? 0,
+          totalWinRate: funnelRes.totalWinRate ?? 0
+        }
+      }
+      if (trendRes) {
+        trendData.value = {
+          dates: trendRes.dates || [],
+          wonData: trendRes.wonData || [],
+          lostData: trendRes.lostData || [],
+          totalData: trendRes.totalData || []
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load funnel data:', error)
+    } finally {
+      funnelLoading.value = false
+      funnelReady.value = true
+    }
+  }
+}
+
 onMounted(async () => {
   await authStore.loadUser()
   
@@ -321,7 +386,8 @@ onMounted(async () => {
   await Promise.all([
     loadPersonalStats(),
     loadRecentFollows(),
-    loadMyTasks()
+    loadMyTasks(),
+    loadFunnelData()
   ])
 })
 
