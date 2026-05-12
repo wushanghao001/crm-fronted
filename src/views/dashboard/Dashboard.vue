@@ -133,7 +133,20 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-        <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-4">待跟进机会</h3>
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-lg font-semibold text-gray-800 dark:text-white">待跟进机会</h3>
+          <NTooltip>
+            <template #trigger>
+              <span class="text-gray-400 cursor-help">ⓘ</span>
+            </template>
+            <div class="text-sm leading-relaxed">
+              <p><b>取数逻辑：</b></p>
+              <p>• 筛选跟进结果为「待成交」的跟进记录</p>
+              <p>• 按最新跟进时间倒序排列</p>
+              <p>• 最多返回10条</p>
+            </div>
+          </NTooltip>
+        </div>
         <div class="space-y-3 max-h-64 overflow-y-auto">
           <div v-for="item in pendingFollows" :key="item.id" class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
             <div class="flex items-center space-x-3">

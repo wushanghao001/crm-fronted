@@ -151,7 +151,7 @@
                 </td>
                 <td class="py-3 px-4 text-sm sticky right-0 bg-white dark:bg-gray-800 z-10">
                   <div class="flex items-center gap-2">
-                    <NButton size="small" type="primary" @click="handleEdit(contact)">
+                    <NButton size="small" type="primary" @click="handleView(contact)">
                       <Eye class="w-4 h-4 mr-1" />
                       查看
                     </NButton>
@@ -230,6 +230,55 @@
       </template>
     </NModal>
 
+    <!-- 查看详情弹窗 -->
+    <NModal v-model:show="showDetailModal" preset="card" title="联系人详情" style="width: 500px;">
+      <div class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <p class="text-sm text-gray-500">姓名</p>
+            <p class="mt-1 text-gray-800 dark:text-gray-200">{{ detailData.name || '-' }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">所属客户</p>
+            <p class="mt-1 text-gray-800 dark:text-gray-200">{{ detailData.customerName || '-' }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">联系电话</p>
+            <p class="mt-1 text-gray-800 dark:text-gray-200">{{ detailData.phone || '-' }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">邮箱</p>
+            <p class="mt-1 text-gray-800 dark:text-gray-200">{{ detailData.email || '-' }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">职位</p>
+            <p class="mt-1 text-gray-800 dark:text-gray-200">{{ detailData.position || '-' }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">状态</p>
+            <p class="mt-1">
+              <span :class="getStatusClass(detailData.status)">
+                {{ getStatusText(detailData.status) }}
+              </span>
+            </p>
+          </div>
+        </div>
+        <div v-if="detailData.remark">
+          <p class="text-sm text-gray-500">备注</p>
+          <p class="mt-1 text-gray-800 dark:text-gray-200">{{ detailData.remark }}</p>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500">创建时间</p>
+          <p class="mt-1 text-gray-800 dark:text-gray-200">{{ formatDate(detailData.createdAt) }}</p>
+        </div>
+      </div>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <NButton @click="showDetailModal = false">关闭</NButton>
+        </div>
+      </template>
+    </NModal>
+
     <!-- 批量修改状态弹窗 -->
     <NModal v-model:show="showBatchStatusModal" preset="card" title="批量修改状态" style="width: 400px;">
       <NForm :model="batchStatusForm" label-placement="left" label-width="80px">
@@ -270,6 +319,9 @@ const showModal = ref(false)
 const isEdit = ref(false)
 const submitLoading = ref(false)
 const currentEditId = ref<number | null>(null)
+
+const showDetailModal = ref(false)
+const detailData = ref<any>({})
 
 const showBatchStatusModal = ref(false)
 const batchLoading = ref(false)
@@ -407,7 +459,7 @@ const handleEdit = (row: any) => {
   currentEditId.value = row.id
   Object.assign(formData, {
     name: row.name,
-    customerId: row.customerId,
+    customerId: row.customerId ? row.customerId.toString() : '',
     phone: row.phone,
     email: row.email,
     position: row.position,
@@ -415,6 +467,14 @@ const handleEdit = (row: any) => {
     remark: row.remark || ''
   })
   showModal.value = true
+}
+
+const handleView = (row: any) => {
+  detailData.value = {
+    ...row,
+    customerName: row.customerName || allCustomers.value.find(c => c.id === row.customerId)?.name || '未知客户'
+  }
+  showDetailModal.value = true
 }
 
 const handleSubmit = async () => {

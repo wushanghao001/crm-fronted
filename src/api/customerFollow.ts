@@ -25,13 +25,15 @@ export interface FollowListResponse {
 }
 
 export const getFollowList = (params: {
-  customerId: number
+  customerId?: number
   pageNum?: number
   pageSize?: number
   keyword?: string
   followType?: string
   followResult?: string
   intentLevel?: string
+  startDate?: string
+  endDate?: string
 }) => {
   return request.get<FollowListResponse>('/customer/follow/list', { params })
 }

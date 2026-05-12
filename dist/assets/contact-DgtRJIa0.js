@@ -1,1 +1,0 @@
-import{aq as e}from"./index-DDBnr8UM.js";const a=t=>e.get("/contacts",{params:{pageNum:t.page,pageSize:t.size,keyword:t.keyword}}),n=t=>e.post("/contacts",t),s=(t,c)=>e.put(`/contacts/${t}`,c),r=t=>e.delete(`/contacts/${t}`);export{n as c,r as d,a as g,s as u};

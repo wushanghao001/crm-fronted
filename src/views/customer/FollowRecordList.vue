@@ -15,43 +15,45 @@
 
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
       <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-        <div class="flex flex-wrap gap-4">
-          <div class="flex-1 min-w-[200px]">
-            <NInput
-              v-model:value="searchKeyword"
-              placeholder="搜索客户名称或跟进内容"
-              clearable
-              @keyup.enter="handleSearch"
-            />
-          </div>
+        <div class="flex items-center gap-4" style="flex-wrap: nowrap; min-width: 0;">
+          <NInput
+            v-model:value="searchKeyword"
+            placeholder="搜索客户名称或跟进内容"
+            clearable
+            @keyup.enter="handleSearch"
+            style="width: 200px; flex-shrink: 0;"
+          />
           <NSelect
             v-model:value="followTypeFilter"
             placeholder="跟进方式"
-            class="w-36"
+            style="width: 120px; flex-shrink: 0;"
             :options="followTypeOptions"
           />
           <NSelect
             v-model:value="followResultFilter"
             placeholder="跟进结果"
-            class="w-40"
+            style="width: 130px; flex-shrink: 0;"
             :options="followResultOptions"
           />
           <NSelect
             v-model:value="intentLevelFilter"
             placeholder="意向度"
-            class="w-32"
+            style="width: 100px; flex-shrink: 0;"
             :options="intentLevelOptions"
           />
           <NDatePicker
             v-model:value="dateRange"
             type="daterange"
             clearable
-            placeholder="跟进日期范围"
-            class="w-64"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            format="yyyy-MM-dd"
+            value-format="yyyy-MM-dd"
+            style="width: 280px; flex-shrink: 0;"
             @update:value="handleSearch"
           />
-          <NButton type="primary" @click="handleSearch">搜索</NButton>
-          <NButton @click="handleReset">重置</NButton>
+          <NButton type="primary" @click="handleSearch" style="flex-shrink: 0;">搜索</NButton>
+          <NButton @click="handleReset" style="flex-shrink: 0;">重置</NButton>
         </div>
       </div>
 
@@ -62,96 +64,31 @@
       </div>
 
       <div class="overflow-x-auto">
-        <div class="min-w-[1200px]">
-          <table class="w-full">
-            <thead>
-              <tr class="bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-                <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[100px]">
-                  客户名称
-                </th>
-                <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[100px]">
-                  跟进方式
-                </th>
-                <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[100px]">
-                  跟进结果
-                </th>
-                <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[80px]">
-                  意向度
-                </th>
-                <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[200px]">
-                  跟进内容
-                </th>
-                <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[150px]">
-                  下次跟进时间
-                </th>
-                <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[100px]">
-                  跟进人
-                </th>
-                <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400 min-w-[150px]">
-                  跟进时间
-                </th>
-                <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 dark:text-gray-400 w-24">
-                  操作
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="follow in followList"
-                :key="follow.id"
-                class="border-b border-gray-100 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                <td class="py-3 px-4 text-sm text-gray-800 dark:text-gray-200">{{ follow.customerName || '未知客户' }}</td>
-                <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                  <span :class="getFollowTypeClass(follow.followType)">
-                    {{ getFollowTypeText(follow.followType) }}
-                  </span>
-                </td>
-                <td class="py-3 px-4 text-sm">
-                  <span :class="getFollowResultClass(follow.followResult)">
-                    {{ getFollowResultText(follow.followResult) }}
-                  </span>
-                </td>
-                <td class="py-3 px-4 text-sm">
-                  <span :class="getIntentLevelClass(follow.intentLevel)">
-                    {{ getIntentLevelText(follow.intentLevel) }}
-                  </span>
-                </td>
-                <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 max-w-xs truncate" :title="follow.content">
-                  {{ follow.content || '-' }}
-                </td>
-                <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                  {{ follow.nextFollowTime ? formatDateTime(follow.nextFollowTime) : '-' }}
-                </td>
-                <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{{ follow.followUserName || '-' }}</td>
-                <td class="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">
-                  {{ follow.createdAt ? formatDateTime(follow.createdAt) : '-' }}
-                </td>
-                <td class="py-3 px-4 text-sm">
-                  <NButton size="small" type="primary" @click="viewDetail(follow)">
-                    查看
-                  </NButton>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div v-if="followList.length === 0" class="py-12 text-center text-gray-400">
-            暂无跟进记录数据
-          </div>
+        <NDataTable
+          :columns="columns"
+          :data="followList"
+          :loading="loading"
+          :pagination="false"
+          :scroll-x="1400"
+          :scroll-y="400"
+          :row-key="(row) => row.id"
+        />
+        <div v-if="followList.length === 0" class="py-12 text-center text-gray-400">
+          暂无跟进记录数据
         </div>
       </div>
 
-      <div class="p-4 flex justify-between items-center border-t border-gray-200 dark:border-gray-700">
-        <span class="text-sm text-gray-500">共 {{ pagination.total }} 条记录</span>
+      <div class="flex items-center justify-between p-4 border-t border-gray-200 dark:border-gray-700">
+        <span class="text-sm text-gray-500">共 {{ pagination.total }} 条</span>
         <NPagination
           v-model:page="pagination.page"
-          :page-size="pagination.pageSize"
-          :item-count="pagination.total"
+          v-model:page-size="pagination.pageSize"
+          :page-count="Math.ceil(pagination.total / pagination.pageSize) || 1"
+          :page-sizes="[10, 20, 50, 100]"
+          :show-size-picker="true"
+          :total="pagination.total"
           @update:page="handlePageChange"
           @update:page-size="handlePageSizeChange"
-          :page-sizes="[10, 20, 50, 100]"
-          show-size-picker
         />
       </div>
     </div>
@@ -223,11 +160,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, h } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   NButton, NInput, NSelect, NPagination, NModal,
-  NDatePicker, NTag
+  NDatePicker, NTag, NDataTable, NDropdown, NSpace
 } from 'naive-ui'
 import { Download as DownloadIcon } from '@vicons/ionicons5'
 import { message } from '@/utils/message'
@@ -280,6 +217,39 @@ const intentLevelOptions = [
   { label: '高意向', value: 'high' },
   { label: '中意向', value: 'medium' },
   { label: '低意向', value: 'low' }
+]
+
+const renderActions = (row: any) => {
+  const options = [
+    { label: '查看', key: 'view' }
+  ]
+  const handleSelect = (key: string) => {
+    if (key === 'view') viewDetail(row)
+  }
+  return h(NDropdown, {
+    trigger: 'click',
+    options,
+    onSelect: handleSelect
+  }, {
+    default: () => h('a', { class: 'text-blue-500 hover:text-blue-700 cursor-pointer flex items-center justify-center', style: 'font-size: 18px; width: 100%; height: 100%;' }, '...')
+  })
+}
+
+const columns = [
+  { title: '客户名称', key: 'customerName', width: 150, ellipsis: { tooltip: true } },
+  { title: '跟进方式', key: 'followType', width: 100,
+    render: (row: any) => h('span', { class: getFollowTypeClass(row.followType) }, getFollowTypeText(row.followType)) },
+  { title: '跟进结果', key: 'followResult', width: 120,
+    render: (row: any) => h('span', { class: getFollowResultClass(row.followResult) }, getFollowResultText(row.followResult)) },
+  { title: '意向度', key: 'intentLevel', width: 100,
+    render: (row: any) => h('span', { class: getIntentLevelClass(row.intentLevel) }, getIntentLevelText(row.intentLevel)) },
+  { title: '跟进内容', key: 'content', width: 250, ellipsis: { tooltip: true } },
+  { title: '下次跟进', key: 'nextFollowTime', width: 150,
+    render: (row: any) => row.nextFollowTime ? formatDateTime(row.nextFollowTime) : '-' },
+  { title: '跟进人', key: 'followUserName', width: 100 },
+  { title: '跟进时间', key: 'createdAt', width: 150,
+    render: (row: any) => row.createdAt ? formatDateTime(row.createdAt) : '-' },
+  { title: '操作', key: 'actions', width: 60, fixed: 'right', render: renderActions }
 ]
 
 const followTypeMap: Record<string, string> = {
@@ -441,10 +411,15 @@ const loadFollowList = async () => {
       params.intentLevel = intentLevelFilter.value
     }
     if (dateRange.value && dateRange.value[0]) {
-      const startDate = new Date(dateRange.value[0])
-      const endDate = new Date(dateRange.value[1])
-      params.startDate = startDate.toISOString().split('T')[0]
-      params.endDate = endDate.toISOString().split('T')[0]
+      const formatDate = (timestamp: number) => {
+        const date = new Date(timestamp)
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
+      }
+      params.startDate = formatDate(dateRange.value[0])
+      params.endDate = formatDate(dateRange.value[1])
     }
 
     const response = await getFollowList(params as any)

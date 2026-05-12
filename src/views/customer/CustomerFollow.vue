@@ -15,7 +15,14 @@
           <div class="lg:col-span-2">
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
               <div class="p-6 border-b border-gray-200 dark:border-gray-700">
-                <div class="flex items-center justify-between">
+                <div v-if="!dataReady" class="animate-pulse">
+                  <div class="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-3"></div>
+                  <div class="flex gap-4">
+                    <div class="h-5 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
+                    <div class="h-5 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
+                  </div>
+                </div>
+                <div v-else class="flex items-center justify-between">
                   <div>
                     <h2 class="text-xl font-semibold text-gray-800 dark:text-white">{{ customerInfo.name }}</h2>
                     <div class="flex items-center gap-4 mt-2">
@@ -41,7 +48,15 @@
               </div>
 
               <div class="p-6">
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div v-if="!dataReady" class="animate-pulse">
+                  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div v-for="i in 8" :key="i">
+                      <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+                      <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <p class="text-sm text-gray-500 dark:text-gray-400">联系电话</p>
                     <p class="mt-1 text-gray-800 dark:text-white">{{ customerInfo.phone || '-' }}</p>
@@ -154,62 +169,29 @@
                 </div>
 
                 <div v-else class="overflow-x-auto">
-                  <table class="w-full">
-                    <thead class="bg-gray-50 dark:bg-gray-700">
-                      <tr>
-                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">跟进时间</th>
-                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">跟进方式</th>
-                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">跟进结果</th>
-                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">跟进内容</th>
-                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">意向度</th>
-                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">下次跟进</th>
-                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">跟进人</th>
-                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-600 dark:text-gray-300">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                      <tr v-for="follow in followList" :key="follow.id" class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td class="px-4 py-3 text-sm text-gray-800 dark:text-gray-200">{{ follow.createdAt }}</td>
-                        <td class="px-4 py-3 text-sm text-gray-800 dark:text-gray-200">{{ getFollowTypeText(follow.followType) }}</td>
-                        <td class="px-4 py-3 text-sm text-gray-800 dark:text-gray-200">{{ getFollowResultText(follow.followResult) }}</td>
-                        <td class="px-4 py-3 text-sm text-gray-800 dark:text-gray-200 max-w-xs truncate">{{ follow.content || '-' }}</td>
-                        <td class="px-4 py-3">
-                          <span :class="getIntentLevelClass(follow.intentLevel)" class="px-2 py-1 rounded text-xs">
-                            {{ getIntentLevelText(follow.intentLevel) }}
-                          </span>
-                        </td>
-                        <td class="px-4 py-3 text-sm text-gray-800 dark:text-gray-200">{{ follow.nextFollowTime || '-' }}</td>
-                        <td class="px-4 py-3 text-sm text-gray-800 dark:text-gray-200">{{ follow.followUserName || '-' }}</td>
-                        <td class="px-4 py-3 text-sm">
-                          <button @click="viewFollowDetail(follow)" class="text-blue-500 hover:text-blue-700 mr-3">查看</button>
-                          <button @click="editFollow(follow)" class="text-green-500 hover:text-green-700 mr-3">编辑</button>
-                          <button @click="deleteFollowConfirm(follow.id)" class="text-red-500 hover:text-red-700">删除</button>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  <NDataTable
+                    :columns="columns"
+                    :data="followList"
+                    :loading="loading"
+                    :pagination="false"
+                    :scroll-x="1200"
+                    :scroll-y="400"
+                    :row-key="(row) => row.id"
+                  />
                 </div>
 
-                <div v-if="total > 0" class="mt-4 flex justify-end">
-                  <div class="flex items-center gap-2">
-                    <button
-                      @click="page--; loadFollowList()"
-                      :disabled="page <= 1"
-                      class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 disabled:opacity-50"
-                    >
-                      上一页
-                    </button>
-                    <span class="text-sm text-gray-600 dark:text-gray-400">
-                      第 {{ page }} / {{ Math.ceil(total / pageSize) }} 页
-                    </span>
-                    <button
-                      @click="page++; loadFollowList()"
-                      :disabled="page >= Math.ceil(total / pageSize)"
-                      class="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 disabled:opacity-50"
-                    >
-                      下一页
-                    </button>
-                  </div>
+                <div class="flex items-center justify-between p-4 border-t border-gray-200 dark:border-gray-700">
+                  <span class="text-sm text-gray-500">共 {{ total }} 条</span>
+                  <NPagination
+                    v-model:page="page"
+                    v-model:page-size="pageSize"
+                    :page-count="Math.ceil(total / pageSize) || 1"
+                    :page-sizes="[10, 20, 50, 100]"
+                    :show-size-picker="true"
+                    :total="total"
+                    @update:page="handlePageChange"
+                    @update:page-size="handlePageSizeChange"
+                  />
                 </div>
               </div>
             </div>
@@ -251,7 +233,7 @@
                 </div>
               </div>
 
-              <div v-if="nextFollowTask.length > 0 && customerInfo.status !== 'churned'" class="p-4 border-t border-gray-200 dark:border-gray-700">
+              <div v-if="dataReady && nextFollowTask.length > 0 && customerInfo.status !== 'churned'" class="p-4 border-t border-gray-200 dark:border-gray-700">
                 <h4 class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">下次跟进提醒</h4>
                 <div class="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3">
                   <p class="text-sm text-gray-800 dark:text-gray-200">{{ nextFollowTask[0].title }} - {{ nextFollowTask[0].customerName || '未知客户' }}</p>
@@ -543,9 +525,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, h } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { NDatePicker } from 'naive-ui'
+import { NDatePicker, NButton, NDataTable, NPagination, NSpace, NDropdown } from 'naive-ui'
 import { getFollowList, getFollowDetail, createFollow, updateFollow, deleteFollow, getPendingFollowTasks, type CustomerFollow } from '@/api/customerFollow'
 import { getCustomerById } from '@/api/customer'
 
@@ -573,6 +555,7 @@ const followList = ref<CustomerFollow[]>([])
 const timelineList = ref<CustomerFollow[]>([])
 const loading = ref(false)
 const submitLoading = ref(false)
+const dataReady = ref(false)
 
 const showFollowModal = ref(false)
 const showQuickFollowModal = ref(false)
@@ -588,6 +571,40 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const page = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+
+const renderActions = (row: any) => {
+  const options = [
+    { label: '查看', key: 'view' },
+    { label: '编辑', key: 'edit' },
+    { label: '删除', key: 'delete' }
+  ]
+  const handleSelect = (key: string) => {
+    if (key === 'view') viewFollowDetail(row)
+    else if (key === 'edit') editFollow(row)
+    else if (key === 'delete') deleteFollowConfirm(row.id)
+  }
+  return h(NDropdown, {
+    trigger: 'click',
+    options,
+    onSelect: handleSelect
+  }, {
+    default: () => h('a', { class: 'text-blue-500 hover:text-blue-700 cursor-pointer flex items-center justify-center', style: 'font-size: 18px; width: 100%; height: 100%;' }, '...')
+  })
+}
+
+const columns = [
+  { title: '跟进时间', key: 'createdAt', width: 150 },
+  { title: '跟进方式', key: 'followType', width: 100,
+    render: (row: any) => getFollowTypeText(row.followType) },
+  { title: '跟进结果', key: 'followResult', width: 120,
+    render: (row: any) => getFollowResultText(row.followResult) },
+  { title: '跟进内容', key: 'content', width: 250, ellipsis: { tooltip: true } },
+  { title: '意向度', key: 'intentLevel', width: 100,
+    render: (row: any) => h('span', { class: getIntentLevelClass(row.intentLevel) }, getIntentLevelText(row.intentLevel)) },
+  { title: '下次跟进', key: 'nextFollowTime', width: 150 },
+  { title: '跟进人', key: 'followUserName', width: 100 },
+  { title: '操作', key: 'actions', width: 60, fixed: 'right', render: renderActions }
+]
 
 const searchKeyword = ref('')
 const filterFollowType = ref('')
@@ -676,10 +693,22 @@ const goBack = () => {
   router.back()
 }
 
+const handlePageChange = (newPage: number) => {
+  page.value = newPage
+  loadFollowList()
+}
+
+const handlePageSizeChange = (newPageSize: number) => {
+  pageSize.value = newPageSize
+  page.value = 1
+  loadFollowList()
+}
+
 const loadCustomerInfo = async () => {
   try {
     const res = await getCustomerById(customerId.value)
     Object.assign(customerInfo, res)
+    dataReady.value = true
   } catch (error) {
     console.error('加载客户信息失败:', error)
   }

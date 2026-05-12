@@ -112,7 +112,7 @@
               <div class="values-grid">
                 <div class="value-card" v-for="(value, index) in values" :key="index">
                   <div class="value-icon-wrapper">
-                    <el-icon :size="32" class="value-icon"><component :is="value.icon" /></el-icon>
+                    <component :is="value.icon" class="value-icon-svg" />
                   </div>
                   <span class="value-text">{{ value.text }}</span>
                 </div>
@@ -210,7 +210,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   User, TrendCharts, ChatLineSquare, OfficeBuilding, Phone, Message, Location,
-  Trophy, Star, CircleCheck, Timer, MagicStick, Position
+  Trophy, Star, MagicStick, Position
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -260,8 +260,8 @@ const features = [
 const values = [
   { icon: markRaw(Trophy), text: '客户至上' },
   { icon: markRaw(Star), text: '专业服务' },
-  { icon: markRaw(CircleCheck), text: '创新驱动' },
-  { icon: markRaw(Timer), text: '安全可靠' }
+  { icon: markRaw(MagicStick), text: '创新驱动' },
+  { icon: markRaw(OfficeBuilding), text: '安全可靠' }
 ]
 
 const contactInfo = [
@@ -823,6 +823,12 @@ window.addEventListener('scroll', () => {
 }
 
 .value-icon {
+  color: #fff !important;
+}
+
+.value-icon-svg {
+  width: 32px;
+  height: 32px;
   color: #fff;
 }
 
