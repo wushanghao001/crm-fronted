@@ -2,7 +2,8 @@ import axios, { type InternalAxiosRequestConfig, type AxiosResponse } from 'axio
 import { useAuthStore } from '@/stores/auth'
 import { message } from '@/utils/message'
 
-const baseURL = 'http://localhost:8888/api'
+ const baseURL = 'http://82.157.5.106:8888/api'
+// const baseURL = 'http://localhost:8888/api'
 //const baseURL = 'https://crm-backend-upuy.onrender.com/api'
 
 const request = axios.create({
