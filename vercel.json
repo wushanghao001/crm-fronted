@@ -3,6 +3,10 @@
   "installCommand": "npm install --force",
   "rewrites": [
     {
+      "source": "/api/(.*)",
+      "destination": "http://82.157.5.106:8888/api/$1"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
