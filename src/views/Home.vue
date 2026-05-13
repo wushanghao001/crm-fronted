@@ -138,6 +138,7 @@
             <input type="checkbox" :checked="task.status === 'completed'" @change="toggleTask(task)" class="w-4 h-4 rounded border-gray-300 mt-0.5" />
             <div class="flex-1 min-w-0">
               <p class="text-gray-800 dark:text-white font-medium truncate" :class="{ 'line-through text-gray-400': task.status === 'completed' }">{{ task.title }}</p>
+              <p v-if="task.customerName" class="text-sm text-gray-500 dark:text-gray-400 mt-1 truncate">客户: {{ task.customerName }}</p>
               <p v-if="task.remark" class="text-sm text-gray-500 dark:text-gray-400 mt-1 truncate">备注: {{ task.remark }}</p>
               <div class="flex items-center gap-2 mt-2">
                 <span class="text-xs text-gray-400 flex items-center gap-1">
@@ -199,7 +200,7 @@ defineOptions({
   name: 'Home'
 })
 
-import { ref, reactive, onMounted, onActivated, computed } from 'vue'
+import { ref, reactive, onMounted, onActivated, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { NTable, NButton, NModal, NForm, NFormItem, NInput, NSelect, NDatePicker } from 'naive-ui'
 import VChart from 'vue-echarts'
@@ -216,6 +217,8 @@ import { getFollowList } from '@/api/customerFollow'
 import { getTaskList, createTask, deleteTask, toggleTaskStatus } from '@/api/task'
 import { getFunnelData, getTrendData } from '@/api/funnel'
 import { message as messageUtil } from '@/utils/message'
+import SockJS from 'sockjs-client'
+import Stomp from 'stompjs'
 
 use([CanvasRenderer, LineChart, GridComponent, TooltipComponent])
 
@@ -224,6 +227,8 @@ const authStore = useAuthStore()
 const message = messageUtil
 
 const helpModal = ref<InstanceType<typeof HelpModal> | null>(null)
+let stompClient: any = null
+let reconnectTimer: any = null
 
 const funnelLoading = ref(false)
 const refreshing = ref(false)
@@ -234,6 +239,39 @@ const statistics = reactive({
   opportunities: 0,
   pendingServices: 0
 })
+
+const connectWebSocket = () => {
+  console.log('[Home] Connecting to WebSocket...')
+  const socket = new SockJS('/ws')
+  stompClient = Stomp.over(socket)
+  
+  stompClient.connect({}, () => {
+    console.log('[Home] WebSocket connected')
+    stompClient.subscribe('/topic/dashboard-refresh', () => {
+      console.log('[Home] Received refresh message from server')
+      loadHomeData()
+    })
+  }, (error: any) => {
+    console.error('[Home] WebSocket connection error:', error)
+    if (reconnectTimer) clearTimeout(reconnectTimer)
+    reconnectTimer = setTimeout(() => {
+      console.log('[Home] Reconnecting WebSocket...')
+      connectWebSocket()
+    }, 5000)
+  })
+}
+
+const disconnectWebSocket = () => {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer)
+    reconnectTimer = null
+  }
+  if (stompClient && stompClient.connected) {
+    stompClient.disconnect(() => {
+      console.log('[Home] WebSocket disconnected')
+    })
+  }
+}
 
 const funnelData = ref<any>({
   leads: 0,
@@ -501,12 +539,16 @@ onMounted(async () => {
   console.log('[Home] Loading data...')
   await loadHomeData()
   console.log('[Home] Data loaded')
+  connectWebSocket()
 })
 
 onActivated(async () => {
   console.log('[Home] onActivated called')
-  // 组件从缓存中激活时，不重新加载数据
-  // 数据仍然保持缓存状态
+})
+
+onUnmounted(() => {
+  console.log('[Home] onUnmounted called')
+  disconnectWebSocket()
 })
 
 const goToCustomers = () => router.push('/dashboard/customers')
@@ -522,11 +564,12 @@ const handleFunnelTimeRangeChange = async (newTimeRange: string) => {
 const loadMyTasks = async () => {
   if (authStore.user?.role === 'admin') return
   try {
-    const res: any = await getTaskList({ pageNum: 1, pageSize: 50 })
+    const res: any = await getTaskList({ pageNum: 1, pageSize: 100 })
     myTasks.value = (res?.list || []).map((item: any) => ({
       id: item.id,
       title: item.title,
       remark: item.content || item.remark,
+      customerName: item.customerName,
       dueDate: formatDateTime(item.dueDate),
       priority: item.priority || 'medium',
       status: item.status,
@@ -601,7 +644,18 @@ const handleDeleteTask = async (task: any) => {
 const toggleTask = async (task: any) => {
   try {
     await toggleTaskStatus(task.id)
-    loadMyTasks()
+    // 更新本地列表中的任务状态
+    const targetTask = myTasks.value.find(t => t.id === task.id)
+    if (targetTask) {
+      targetTask.status = targetTask.status === 'pending' ? 'completed' : 'pending'
+    }
+    // 重新排序：未处理的在前，已处理的在后
+    myTasks.value.sort((a, b) => {
+      if (a.status !== b.status) {
+        return a.status === 'pending' ? -1 : 1
+      }
+      return 0
+    })
   } catch (error: any) {
     message.error(error.message || '更新失败')
   }

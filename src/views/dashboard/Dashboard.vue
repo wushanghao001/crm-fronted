@@ -197,7 +197,7 @@ defineOptions({
   name: 'Dashboard'
 })
 
-import { ref, reactive, computed, onMounted, onActivated, watch } from 'vue'
+import { ref, reactive, computed, onMounted, onActivated, onUnmounted, watch } from 'vue'
 import { NButton, NTooltip, NSelect, NPopconfirm } from 'naive-ui'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
@@ -208,6 +208,8 @@ import { People, Briefcase, TrendingUp, Cart, DocumentText, Time, Settings, Refr
 import { useAuthStore } from '@/stores/auth'
 import { message } from '@/utils/message'
 import request from '@/api/request'
+import SockJS from 'sockjs-client'
+import Stomp from 'stompjs'
 
 use([CanvasRenderer, LineChart, PieChart, FunnelChart, BarChart, GridComponent, TooltipComponent, LegendComponent])
 
@@ -249,6 +251,41 @@ const recentLogs = ref<any[]>([])
 const pendingFollows = ref<any[]>([])
 const pendingCustomers = ref<any[]>([])
 const refreshing = ref(false)
+let stompClient: any = null
+let reconnectTimer: any = null
+
+const connectWebSocket = () => {
+  console.log('[Dashboard] Connecting to WebSocket...')
+  const socket = new SockJS('/ws')
+  stompClient = Stomp.over(socket)
+  
+  stompClient.connect({}, () => {
+    console.log('[Dashboard] WebSocket connected')
+    stompClient.subscribe('/topic/dashboard-refresh', () => {
+      console.log('[Dashboard] Received refresh message from server')
+      loadDashboardData()
+    })
+  }, (error: any) => {
+    console.error('[Dashboard] WebSocket connection error:', error)
+    if (reconnectTimer) clearTimeout(reconnectTimer)
+    reconnectTimer = setTimeout(() => {
+      console.log('[Dashboard] Reconnecting WebSocket...')
+      connectWebSocket()
+    }, 5000)
+  })
+}
+
+const disconnectWebSocket = () => {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer)
+    reconnectTimer = null
+  }
+  if (stompClient && stompClient.connected) {
+    stompClient.disconnect(() => {
+      console.log('[Dashboard] WebSocket disconnected')
+    })
+  }
+}
 
 const handleRefresh = async () => {
   refreshing.value = true
@@ -393,10 +430,15 @@ watch(timeRange, () => {
 onMounted(async () => {
   console.log('[Dashboard] onMounted called')
   await loadDashboardData()
+  connectWebSocket()
 })
 
 onActivated(async () => {
   console.log('[Dashboard] onActivated called')
-  // 组件从缓存中激活时，不重新加载数据
+})
+
+onUnmounted(() => {
+  console.log('[Dashboard] onUnmounted called')
+  disconnectWebSocket()
 })
 </script>

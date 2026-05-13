@@ -9,7 +9,20 @@ export default defineConfig({
       '@': resolve(__dirname, 'src')
     }
   },
+  define: {
+    global: 'globalThis'
+  },
   server: {
-    port: 8080
+    port: 8080,
+    proxy: {
+      '/ws': {
+        target: 'http://localhost:8888',
+        ws: true
+      },
+      '/api': {
+        target: 'http://localhost:8888',
+        changeOrigin: true
+      }
+    }
   }
 })

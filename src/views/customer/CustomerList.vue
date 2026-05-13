@@ -289,6 +289,17 @@ const renderActions = (customer: any) => {
           icon: () => h(AssignIcon, { class: 'w-3 h-3 mr-1' })
         })
       )
+      buttons.push(
+        h(NPopconfirm, {
+          title: `确定要删除客户 ${customer.name} 吗？`,
+          onPositiveClick: () => handleDeleteConfirm(customer.id)
+        }, {
+          trigger: () => h(NButton, { size: 'small', type: 'error' }, {
+            default: () => '删除',
+            icon: () => h(DeleteIcon, { class: 'w-3 h-3 mr-1' })
+          })
+        })
+      )
     }
     buttons.push(
       h(NButton, { size: 'small', type: 'success', onClick: () => handleClaim(customer) }, {
