@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { login as apiLogin, register as apiRegister, getUserInfo } from '@/api/auth'
+import { login as apiLogin, register as apiRegister, getUserInfo, logout as apiLogout } from '@/api/auth'
+import { setLoggingOut } from '@/api/request'
 
 export interface User {
   id: number
@@ -49,10 +50,26 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  const logout = () => {
+  const logout = async () => {
+    setLoggingOut(true)
+    try {
+      await apiLogout()
+    } catch (e) {
+      console.error('Logout API error:', e)
+    } finally {
+      setLoggingOut(false)
+    }
     token.value = ''
     user.value = null
     localStorage.removeItem('token')
+    localStorage.removeItem('user')
+  }
+
+  const clearSession = () => {
+    token.value = ''
+    user.value = null
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
   }
 
   const loadUser = async () => {
@@ -75,6 +92,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     logout,
+    clearSession,
     loadUser
   }
 })

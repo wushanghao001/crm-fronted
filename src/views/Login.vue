@@ -83,8 +83,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
-import { NForm, NFormItem, NInput, NButton, NCheckbox, NAutoComplete } from 'naive-ui'
-import { message } from '@/utils/message'
+import { NForm, NFormItem, NInput, NButton, NCheckbox, NAutoComplete, useMessage } from 'naive-ui'
 import { Person, LockClosed, Eye, EyeOff } from '@vicons/ionicons5'
 import { useAuthStore } from '@/stores/auth'
 import router from '@/router'
@@ -99,6 +98,7 @@ const formRef = ref()
 const loading = ref(false)
 const rememberMe = ref(localStorage.getItem('rememberMe') === 'true')
 const showPassword = ref(false)
+const message = useMessage()
 
 const savedAccounts = ref<AccountItem[]>([])
 const currentAccountIndex = ref(-1)
@@ -180,6 +180,7 @@ const handleSubmit = async () => {
 
     const result = await authStore.login(form.username, form.password)
     const userRole = (result as any).user?.role
+    const hasExistingSession = (result as any).hasExistingSession
 
     const existingIndex = savedAccounts.value.findIndex(acc => acc.username === form.username)
     if (existingIndex >= 0) {
@@ -194,6 +195,10 @@ const handleSubmit = async () => {
     localStorage.setItem('rememberMe', rememberMe.value ? 'true' : 'false')
 
     message.success('登录成功')
+
+    if (hasExistingSession) {
+      message.warning('当前账号已在本设备登录，请勿泄露账号信息', { duration: 5000 })
+    }
 
     await new Promise(resolve => setTimeout(resolve, 500))
 

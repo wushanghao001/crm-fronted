@@ -114,7 +114,11 @@
       
       <!-- 页面内容 -->
       <div class="page-content">
-        <router-view />
+        <router-view v-slot="{ Component }">
+          <keep-alive :include="['Home', 'Dashboard']">
+            <component :is="Component" />
+          </keep-alive>
+        </router-view>
       </div>
     </main>
   </div>
@@ -257,8 +261,8 @@ const handleLogout = () => {
     content: '确定要退出系统吗？',
     positiveText: '确定',
     negativeText: '取消',
-    onPositiveClick: () => {
-      authStore.logout()
+    onPositiveClick: async () => {
+      await authStore.logout()
       router.push('/login')
     }
   })

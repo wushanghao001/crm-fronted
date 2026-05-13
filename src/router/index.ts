@@ -189,7 +189,7 @@ router.beforeEach(async (to, from, next) => {
   }
 
   if (to.meta.requiresAuth && !token) {
-    next('/')
+    next('/login')
     return
   }
 

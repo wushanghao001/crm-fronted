@@ -3,6 +3,12 @@
     <div class="flex items-center justify-between">
       <h2 class="text-xl font-bold text-gray-800 dark:text-white">管理首页</h2>
       <div class="flex gap-2">
+        <NButton type="default" @click="handleRefresh" :loading="refreshing">
+          <template #icon>
+            <Refresh />
+          </template>
+          刷新
+        </NButton>
         <NSelect v-model:value="timeRange" :options="timeRangeOptions" style="width: 120px;" />
       </div>
     </div>
@@ -13,7 +19,7 @@
           <div>
             <p class="text-gray-500 dark:text-gray-400 text-sm">系统总用户数</p>
             <p class="text-3xl font-bold text-gray-800 dark:text-white mt-1">{{ overview.totalUsers }}</p>
-            <p class="text-gray-400 text-xs mt-1">今日新增：{{ overview.todayNewUsers }}</p>
+            <p class="text-gray-400 text-xs mt-1">{{ timeRangeLabel }}新增：{{ overview.monthNewUsers }}</p>
           </div>
           <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
             <People class="w-6 h-6 text-blue-500" />
@@ -26,7 +32,7 @@
           <div>
             <p class="text-gray-500 dark:text-gray-400 text-sm">客户总数</p>
             <p class="text-3xl font-bold text-gray-800 dark:text-white mt-1">{{ overview.totalCustomers }}</p>
-            <p class="text-gray-400 text-xs mt-1">今日新增：{{ overview.todayNewCustomers }}</p>
+            <p class="text-gray-400 text-xs mt-1">{{ timeRangeLabel }}新增：{{ overview.monthNewCustomers }}</p>
           </div>
           <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
             <Briefcase class="w-6 h-6 text-green-500" />
@@ -39,7 +45,7 @@
           <div>
             <p class="text-gray-500 dark:text-gray-400 text-sm">销售机会总数</p>
             <p class="text-3xl font-bold text-gray-800 dark:text-white mt-1">{{ overview.totalOpportunities }}</p>
-            <p class="text-gray-400 text-xs mt-1">今日新增：{{ overview.todayNewOpportunities }}</p>
+            <p class="text-gray-400 text-xs mt-1">{{ timeRangeLabel }}新增：{{ overview.monthNewOpportunities }}</p>
           </div>
           <div class="w-12 h-12 bg-yellow-100 dark:bg-yellow-900 rounded-lg flex items-center justify-center">
             <TrendingUp class="w-6 h-6 text-yellow-500" />
@@ -52,7 +58,7 @@
           <div>
             <p class="text-gray-500 dark:text-gray-400 text-sm">总成交单数</p>
             <p class="text-3xl font-bold text-gray-800 dark:text-white mt-1">{{ overview.totalOrders }}</p>
-            <p class="text-gray-400 text-xs mt-1">本月成交：{{ overview.monthOrders }}</p>
+            <p class="text-gray-400 text-xs mt-1">{{ timeRangeLabel }}成交：{{ overview.monthOrders }}</p>
           </div>
           <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
             <Cart class="w-6 h-6 text-purple-500" />
@@ -187,14 +193,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch } from 'vue'
+defineOptions({
+  name: 'Dashboard'
+})
+
+import { ref, reactive, computed, onMounted, onActivated, watch } from 'vue'
 import { NButton, NTooltip, NSelect, NPopconfirm } from 'naive-ui'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart, PieChart, FunnelChart, BarChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
-import { People, Briefcase, TrendingUp, Cart, DocumentText, Time, Settings } from '@vicons/ionicons5'
+import { People, Briefcase, TrendingUp, Cart, DocumentText, Time, Settings, Refresh } from '@vicons/ionicons5'
 import { useAuthStore } from '@/stores/auth'
 import { message } from '@/utils/message'
 import request from '@/api/request'
@@ -211,13 +221,23 @@ const timeRangeOptions = [
   { label: '本季度', value: 'quarter' }
 ]
 
+const timeRangeLabel = computed(() => {
+  const labels: Record<string, string> = {
+    today: '今日',
+    week: '本周',
+    month: '本月',
+    quarter: '本季度'
+  }
+  return labels[timeRange.value] || '本月'
+})
+
 const overview = reactive({
   totalUsers: 0,
-  todayNewUsers: 0,
+  monthNewUsers: 0,
   totalCustomers: 0,
-  todayNewCustomers: 0,
+  monthNewCustomers: 0,
   totalOpportunities: 0,
-  todayNewOpportunities: 0,
+  monthNewOpportunities: 0,
   totalOrders: 0,
   monthOrders: 0
 })
@@ -228,82 +248,87 @@ const industryChartOption = ref({})
 const recentLogs = ref<any[]>([])
 const pendingFollows = ref<any[]>([])
 const pendingCustomers = ref<any[]>([])
+const refreshing = ref(false)
 
-const loadOverview = async () => {
+const handleRefresh = async () => {
+  refreshing.value = true
   try {
-    const data: any = await request.get('/dashboard/overview', { params: { timeRange: timeRange.value } })
-    Object.assign(overview, data)
+    await request.get('/dashboard/refresh')
+    await loadDashboardData()
+    message.success('刷新成功')
   } catch (error) {
-    console.error('Failed to load overview:', error)
+    console.error('Failed to refresh:', error)
+    message.error('刷新失败')
+  } finally {
+    refreshing.value = false
   }
 }
 
-const loadFunnel = async () => {
+const loadDashboardData = async () => {
+  console.log('[Dashboard] loadDashboardData called')
   try {
-    const data: any = await request.get('/dashboard/funnel')
-    const leads = data.leads || 0
-    funnelChartOption.value = {
-      tooltip: { trigger: 'item', formatter: '{b}: {c}' },
-      series: [{
-        type: 'funnel',
-        left: '10%',
-        top: 40,
-        bottom: 40,
-        width: '80%',
-        min: 0,
-        max: leads > 0 ? leads : 100,
-        minSize: '0%',
-        maxSize: '100%',
-        sort: 'descending',
-        gap: 2,
-        label: { show: true, position: 'inside' },
-        itemStyle: { borderColor: '#fff', borderWidth: 1 },
-        data: [
-          { value: data.leads || 0, name: '线索', itemStyle: { color: '#3b82f6' } },
-          { value: data.contacted || 0, name: '跟进', itemStyle: { color: '#60a5fa' } },
-          { value: data.quoted || 0, name: '报价', itemStyle: { color: '#93c5fd' } },
-          { value: data.won || 0, name: '成交', itemStyle: { color: '#22c55e' } },
-          { value: data.lost || 0, name: '流失', itemStyle: { color: '#ef4444' } }
-        ]
-      }]
+    const data: any = await request.get('/dashboard/data', { params: { timeRange: timeRange.value } })
+    console.log('[Dashboard] loadDashboardData response:', data)
+    
+    // 概览数据
+    if (data.overview) {
+      Object.assign(overview, data.overview)
     }
-  } catch (error) {
-    console.error('Failed to load funnel:', error)
-  }
-}
-
-const loadTrend = async () => {
-  try {
-    const data: any[] = await request.get('/dashboard/trend', { params: { timeRange: timeRange.value } })
-    if (data && data.length > 0) {
+    
+    // 漏斗数据
+    if (data.funnel) {
+      const leads = data.funnel.leads || 0
+      funnelChartOption.value = {
+        tooltip: { trigger: 'item', formatter: '{b}: {c}' },
+        series: [{
+          type: 'funnel',
+          left: '10%',
+          top: 40,
+          bottom: 40,
+          width: '80%',
+          min: 0,
+          max: leads > 0 ? leads : 100,
+          minSize: '0%',
+          maxSize: '100%',
+          sort: 'descending',
+          gap: 2,
+          label: { show: true, position: 'inside' },
+          itemStyle: { borderColor: '#fff', borderWidth: 1 },
+          data: [
+            { value: data.funnel.leads || 0, name: '线索', itemStyle: { color: '#3b82f6' } },
+            { value: data.funnel.contacted || 0, name: '跟进', itemStyle: { color: '#60a5fa' } },
+            { value: data.funnel.quoted || 0, name: '报价', itemStyle: { color: '#93c5fd' } },
+            { value: data.funnel.won || 0, name: '成交', itemStyle: { color: '#22c55e' } },
+            { value: data.funnel.lost || 0, name: '流失', itemStyle: { color: '#ef4444' } }
+          ]
+        }]
+      }
+    }
+    
+    // 趋势数据
+    if (data.trend && data.trend.length > 0) {
       trendChartOption.value = {
         tooltip: { trigger: 'axis' },
         legend: { data: ['新增客户', '新增机会', '成交单数'], top: 'top' },
         grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
         xAxis: {
           type: 'category',
-          data: data.map((item: any) => {
+          data: data.trend.map((item: any) => {
             const date = new Date(item.date)
             return `${date.getMonth() + 1}/${date.getDate()}`
           })
         },
         yAxis: { type: 'value' },
         series: [
-          { name: '新增客户', type: 'line', data: data.map((item: any) => item.customers), smooth: true },
-          { name: '新增机会', type: 'line', data: data.map((item: any) => item.opportunities), smooth: true },
-          { name: '成交单数', type: 'line', data: data.map((item: any) => item.orders), smooth: true }
+          { name: '新增客户', type: 'line', data: data.trend.map((item: any) => item.customers), smooth: true },
+          { name: '新增机会', type: 'line', data: data.trend.map((item: any) => item.opportunities), smooth: true },
+          { name: '成交单数', type: 'line', data: data.trend.map((item: any) => item.orders), smooth: true }
         ]
       }
     }
-  } catch (error) {
-    console.error('Failed to load trend:', error)
-  }
-}
-
-const loadIndustryDistribution = async () => {
-  try {
-    const data: any[] = await request.get('/dashboard/industry-distribution')
-    if (data && data.length > 0) {
+    
+    // 行业分布
+    if (data.industryDistribution && data.industryDistribution.length > 0) {
       industryChartOption.value = {
         tooltip: { trigger: 'item' },
         legend: { orient: 'vertical', right: '5%', top: 'center' },
@@ -314,7 +339,7 @@ const loadIndustryDistribution = async () => {
           itemStyle: { borderRadius: 10 },
           label: { show: false },
           emphasis: { label: { show: true, fontSize: 18 } },
-          data: data.map((item: any) => ({
+          data: data.industryDistribution.map((item: any) => ({
             value: item.value,
             name: item.name
           }))
@@ -330,39 +355,20 @@ const loadIndustryDistribution = async () => {
         }]
       }
     }
+    
+    // 最新日志
+    if (data.recentLogs) {
+      recentLogs.value = data.recentLogs
+    }
+    
+    // 待办事项
+    if (data.todos) {
+      pendingFollows.value = data.todos.pendingFollows || []
+      pendingCustomers.value = data.todos.pendingCustomers || []
+    }
   } catch (error) {
-    console.error('Failed to load industry distribution:', error)
+    console.error('Failed to load dashboard data:', error)
   }
-}
-
-const loadRecentLogs = async () => {
-  try {
-    const data: any[] = await request.get('/dashboard/recent-logs')
-    recentLogs.value = data || []
-  } catch (error) {
-    console.error('Failed to load recent logs:', error)
-  }
-}
-
-const loadTodos = async () => {
-  try {
-    const data: any = await request.get('/dashboard/todos')
-    pendingFollows.value = data?.pendingFollows || []
-    pendingCustomers.value = data?.pendingCustomers || []
-  } catch (error) {
-    console.error('Failed to load todos:', error)
-  }
-}
-
-const loadAll = async () => {
-  await Promise.all([
-    loadOverview(),
-    loadFunnel(),
-    loadTrend(),
-    loadIndustryDistribution(),
-    loadRecentLogs(),
-    loadTodos()
-  ])
 }
 
 const formatTime = (timeStr: string) => {
@@ -381,10 +387,16 @@ const formatTime = (timeStr: string) => {
 }
 
 watch(timeRange, () => {
-  loadAll()
+  loadDashboardData()
 })
 
 onMounted(async () => {
-  await loadAll()
+  console.log('[Dashboard] onMounted called')
+  await loadDashboardData()
+})
+
+onActivated(async () => {
+  console.log('[Dashboard] onActivated called')
+  // 组件从缓存中激活时，不重新加载数据
 })
 </script>

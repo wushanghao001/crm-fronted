@@ -147,7 +147,7 @@ const emit = defineEmits<{
 }>()
 
 const loading = ref(false)
-const timeRange = ref(props.externalTimeRange || 'today')
+const timeRange = ref(props.externalTimeRange || 'week')
 const funnelData = ref<FunnelData>({
   leads: 0,
   contacted: 0,
@@ -360,7 +360,8 @@ const loadAllData = async () => {
 
 const handleTimeChange = (value: string) => {
   timeRange.value = value
-  if (props.externalFunnelData && props.externalTrendData) {
+  
+  if (props.autoLoad === false) {
     emit('timeRangeChange', value)
   } else {
     loadAllData()
@@ -401,8 +402,23 @@ onMounted(() => {
     funnelData.value = props.externalFunnelData
     trendData.value = props.externalTrendData!
     loading.value = false
+  } else if (!props.autoLoad) {
+    // 如果设置了 autoLoad=false，不自动加载，等待外部数据
   } else {
     loadAllData()
   }
 })
+
+watch(() => props.externalFunnelData, (newData) => {
+  if (newData && newData.leads > 0) {
+    funnelData.value = newData
+    loading.value = false
+  }
+}, { deep: true })
+
+watch(() => props.externalTrendData, (newData) => {
+  if (newData && newData.dates) {
+    trendData.value = newData
+  }
+}, { deep: true })
 </script>

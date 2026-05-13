@@ -2,12 +2,20 @@
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <h2 class="text-xl font-bold text-gray-800 dark:text-white">工作台</h2>
-      <NButton type="info" @click="helpModal?.open()">
-        <template #icon>
-          <HelpCircle />
-        </template>
-        帮助手册
-      </NButton>
+      <div class="flex gap-2">
+        <NButton type="default" @click="handleRefresh" :loading="refreshing">
+          <template #icon>
+            <Refresh />
+          </template>
+          刷新
+        </NButton>
+        <NButton type="info" @click="helpModal?.open()">
+          <template #icon>
+            <HelpCircle />
+          </template>
+          帮助手册
+        </NButton>
+      </div>
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -73,10 +81,12 @@
     </div>
 
     <SalesFunnel
-      v-if="authStore.user?.role !== 'admin' && funnelReady"
+      v-if="funnelReady"
       :external-funnel-data="funnelData"
       :external-trend-data="trendData"
+      :external-time-range="funnelTimeRange"
       :auto-load="false"
+      @timeRangeChange="handleFunnelTimeRangeChange"
     />
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -185,7 +195,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+defineOptions({
+  name: 'Home'
+})
+
+import { ref, reactive, onMounted, onActivated, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { NTable, NButton, NModal, NForm, NFormItem, NInput, NSelect, NDatePicker } from 'naive-ui'
 import VChart from 'vue-echarts'
@@ -193,7 +207,7 @@ import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
-import { People, TrendingUp, Briefcase, Time, PersonAdd, Cart, ChatboxEllipses, HelpCircle } from '@vicons/ionicons5'
+import { People, TrendingUp, Briefcase, Time, PersonAdd, Cart, ChatboxEllipses, HelpCircle, Refresh } from '@vicons/ionicons5'
 import SalesFunnel from '@/components/SalesFunnel.vue'
 import HelpModal from '@/components/HelpModal.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -212,6 +226,7 @@ const message = messageUtil
 const helpModal = ref<InstanceType<typeof HelpModal> | null>(null)
 
 const funnelLoading = ref(false)
+const refreshing = ref(false)
 const funnelReady = ref(false)
 const statistics = reactive({
   customers: 0,
@@ -238,6 +253,8 @@ const trendData = ref<any>({
   lostData: [],
   totalData: []
 })
+
+const funnelTimeRange = ref('week')
 
 const personalStats = reactive({
   myCustomers: 0,
@@ -340,8 +357,10 @@ const customerChartOption = {
 
 const loadPersonalStats = async () => {
   if (authStore.user?.role !== 'admin') {
+    console.log('[Home] loadPersonalStats called')
     try {
       const data: any = await request.get('/stats/personal')
+      console.log('[Home] loadPersonalStats response:', data)
       personalStats.myCustomers = data.myCustomers || 0
       personalStats.publicCustomers = data.publicCustomers || 0
       personalStats.myOrders = data.myOrders || 0
@@ -352,45 +371,126 @@ const loadPersonalStats = async () => {
   }
 }
 
-const loadFunnelData = async () => {
-  if (authStore.user?.role !== 'admin') {
-    funnelLoading.value = true
-    try {
-      const [funnelRes, trendRes] = await Promise.all([
-        getFunnelData('today'),
-        getTrendData('today')
-      ])
-      if (funnelRes) {
-        funnelData.value = {
-          leads: funnelRes.leads ?? 0,
-          contacted: funnelRes.contacted ?? 0,
-          quoted: funnelRes.quoted ?? 0,
-          won: funnelRes.won ?? 0,
-          lost: funnelRes.lost ?? 0,
-          contactRate: funnelRes.contactRate ?? 0,
-          quoteRate: funnelRes.quoteRate ?? 0,
-          winRate: funnelRes.winRate ?? 0,
-          totalWinRate: funnelRes.totalWinRate ?? 0
-        }
+const handleRefresh = async () => {
+  refreshing.value = true
+  try {
+    await request.get('/home/refresh')
+    await loadHomeData()
+    message.success('刷新成功')
+  } catch (error) {
+    console.error('Failed to refresh:', error)
+    message.error('刷新失败')
+  } finally {
+    refreshing.value = false
+  }
+}
+
+const loadFunnelData = async (timeRange: string = 'week') => {
+  funnelLoading.value = true
+  try {
+    const [funnelRes, trendRes] = await Promise.all([
+      getFunnelData(timeRange),
+      getTrendData(timeRange)
+    ])
+    if (funnelRes) {
+      funnelData.value = {
+        leads: funnelRes.leads ?? 0,
+        contacted: funnelRes.contacted ?? 0,
+        quoted: funnelRes.quoted ?? 0,
+        won: funnelRes.won ?? 0,
+        lost: funnelRes.lost ?? 0,
+        contactRate: funnelRes.contactRate ?? 0,
+        quoteRate: funnelRes.quoteRate ?? 0,
+        winRate: funnelRes.winRate ?? 0,
+        totalWinRate: funnelRes.totalWinRate ?? 0
       }
-      if (trendRes) {
-        trendData.value = {
-          dates: trendRes.dates || [],
-          wonData: trendRes.wonData || [],
-          lostData: trendRes.lostData || [],
-          totalData: trendRes.totalData || []
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load funnel data:', error)
-    } finally {
-      funnelLoading.value = false
-      funnelReady.value = true
     }
+    if (trendRes) {
+      trendData.value = {
+        dates: trendRes.dates || [],
+        wonData: trendRes.wonData || [],
+        lostData: trendRes.lostData || [],
+        totalData: trendRes.totalData || []
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load funnel data:', error)
+  } finally {
+    funnelLoading.value = false
+    funnelReady.value = true
+  }
+}
+
+const loadHomeData = async () => {
+  if (authStore.user?.role === 'admin') return
+  console.log('[Home] loadHomeData called')
+  try {
+    const data: any = await request.get('/home/data', { params: { timeRange: funnelTimeRange.value } })
+    console.log('[Home] loadHomeData response:', data)
+    
+    // 个人统计数据
+    if (data.personalStats) {
+      personalStats.myCustomers = data.personalStats.myCustomers || 0
+      personalStats.publicCustomers = data.personalStats.publicCustomers || 0
+      personalStats.myOrders = data.personalStats.myOrders || 0
+      personalStats.pendingServices = data.personalStats.pendingServices || 0
+    }
+    
+    // 最近跟进记录
+    if (data.recentFollows) {
+      recentInteractions.value = data.recentFollows.map((item: any) => ({
+        customerName: item.customerName || '未知客户',
+        content: item.content || '',
+        time: item.createdAt ? formatTime(item.createdAt) : ''
+      }))
+    }
+    
+    // 我的待办任务
+    if (data.myTasks) {
+      myTasks.value = data.myTasks.map((item: any) => ({
+        id: item.id,
+        title: item.title,
+        remark: item.content || item.remark,
+        dueDate: formatDateTime(item.dueDate),
+        priority: item.priority || 'medium',
+        status: item.status,
+        taskType: item.taskType
+      }))
+    }
+    
+    // 销售漏斗数据
+    if (data.funnelData) {
+      funnelData.value = {
+        leads: data.funnelData.leads || 0,
+        contacted: data.funnelData.contacted || 0,
+        quoted: data.funnelData.quoted || 0,
+        won: data.funnelData.won || 0,
+        lost: data.funnelData.lost || 0,
+        contactRate: data.funnelData.contactRate || 0,
+        quoteRate: data.funnelData.quoteRate || 0,
+        winRate: data.funnelData.winRate || 0,
+        totalWinRate: data.funnelData.totalWinRate || 0
+      }
+    }
+    
+    // 趋势数据
+    if (data.trendData) {
+      trendData.value = {
+        dates: data.trendData.dates || [],
+        wonData: data.trendData.wonData || [],
+        lostData: data.trendData.lostData || [],
+        totalData: data.trendData.totalData || []
+      }
+    }
+    
+    funnelReady.value = true
+  } catch (error) {
+    console.error('Failed to load home data:', error)
   }
 }
 
 onMounted(async () => {
+  console.log('[Home] onMounted called')
   await authStore.loadUser()
   
   if (authStore.user?.role === 'admin') {
@@ -398,18 +498,26 @@ onMounted(async () => {
     return
   }
   
-  await Promise.all([
-    loadPersonalStats(),
-    loadRecentFollows(),
-    loadMyTasks(),
-    loadFunnelData()
-  ])
+  console.log('[Home] Loading data...')
+  await loadHomeData()
+  console.log('[Home] Data loaded')
+})
+
+onActivated(async () => {
+  console.log('[Home] onActivated called')
+  // 组件从缓存中激活时，不重新加载数据
+  // 数据仍然保持缓存状态
 })
 
 const goToCustomers = () => router.push('/dashboard/customers')
 const goToPublicCustomers = () => router.push('/dashboard/customers?filter=public')
 const goToMyOrders = () => router.push('/dashboard/orders?filter=mine')
 const goToPendingServices = () => router.push('/dashboard/services?filter=my')
+
+const handleFunnelTimeRangeChange = async (newTimeRange: string) => {
+  funnelTimeRange.value = newTimeRange
+  await loadFunnelData(newTimeRange)
+}
 
 const loadMyTasks = async () => {
   if (authStore.user?.role === 'admin') return
